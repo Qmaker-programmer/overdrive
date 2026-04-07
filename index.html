@@ -1,0 +1,4004 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Overdrive!</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bungee&display=swap');
+
+        body {
+            margin: 0; padding: 0;
+            background: #020205; color: #fff;
+            font-family: 'Bungee', cursive;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            height: 100vh; overflow: hidden; user-select: none;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 255, 204, 0.2), 0 0 150px rgba(255, 0, 128, 0.1);
+            border: 4px solid #222; background: #000;
+            overflow: hidden; border-radius: 8px;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        .crt-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none; z-index: 20;
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.9);
+        }
+
+        .ui {
+            position: absolute; top: 20px; left: 20px;
+            pointer-events: none; z-index: 15;
+            text-shadow: 2px 2px 0px #000, 0 0 10px rgba(0,255,204,0.8);
+        }
+
+        .ui-right {
+            position: absolute; top: 20px; right: 20px;
+            pointer-events: none; z-index: 15;
+            text-align: right;
+            text-shadow: 2px 2px 0px #000, 0 0 10px rgba(255,0,128,0.8);
+        }
+
+        #speed-bar-container {
+            position: absolute; bottom: 30px; left: 50%;
+            transform: translateX(-50%); width: 300px; height: 15px;
+            background: rgba(0, 0, 0, 0.5); border: 2px solid #222;
+            border-radius: 10px; overflow: hidden; z-index: 15;
+        }
+
+        #speed-bar {
+            width: 0%; height: 100%;
+            background: linear-gradient(90deg, #00ffcc, #ff0080);
+            box-shadow: 0 0 15px #ff0080; transition: width 0.1s;
+        }
+
+        #speedometer {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 120px;
+            height: 120px;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        #overlay, .menu-overlay {
+            position: absolute; inset: 0;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 30; text-align: center;
+        }
+        
+        .menu-overlay {
+            z-index: 60;
+            display: none;
+        }
+
+        h1 { font-size: 50px; margin: 0; color: #fff; text-shadow: 4px 4px 0px #ff0080, -4px -4px 0px #00ffcc; letter-spacing: 2px; }
+        p { font-size: 16px; color: #00ffcc; margin: 15px 0; max-width: 500px; line-height: 1.5;}
+
+        button {
+            margin-top: 20px; padding: 12px 30px; font-size: 20px;
+            font-family: 'Bungee'; background: transparent; color: #fff;
+            border: 3px solid #ff0080; cursor: pointer; transition: all 0.2s;
+            pointer-events: auto;
+        }
+        button:hover { background: #ff0080; transform: scale(1.05); }
+
+        input {
+            font-family: 'Bungee'; font-size: 20px; padding: 10px; margin: 20px; 
+            width: 300px; text-align: center; background: #111; color: #00ffcc; 
+            border: 2px solid #00ffcc; outline: none; border-radius: 5px;
+        }
+        input::placeholder { color: rgba(0, 255, 204, 0.5); }
+
+        #touch-controls {
+            display: flex;
+            position: absolute; bottom: 20px; width: 100%;
+            justify-content: space-between; padding: 0 30px;
+            box-sizing: border-box; z-index: 40;
+            pointer-events: none;
+        }
+        .touch-btn {
+            pointer-events: auto;
+            width: 75px; height: 75px; background: rgba(0, 255, 204, 0.15);
+            border: 3px solid #00ffcc; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 35px; color: #00ffcc;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+        }
+        .touch-btn:active { background: rgba(0,255,204,0.5); transform: scale(0.9); }
+        .btn-action { border-color: #ff0080; color: #ff0080; background: rgba(255, 0, 128, 0.15); }
+
+        .stylish-text {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+            z-index: 25;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+        }
+
+        /* VELOCIMETRO SUPERIOR DERECHA */
+        #speedometer-top {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 100px;
+            height: 100px;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        #shop-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            display: none; /* Se cambia a 'flex' por JS */
+            flex-direction: column;
+            align-items: center;
+            
+            /* ESTO ARREGLA EL SCROLL */
+            overflow-y: auto; 
+            padding: 40px 20px; /* Espacio arriba y abajo */
+        }
+        /* Personalizar la barra de scroll */
+        #shop-overlay::-webkit-scrollbar, 
+        #inventory-overlay::-webkit-scrollbar {
+            width: 8px;
+        }
+        #shop-overlay::-webkit-scrollbar-thumb, 
+        #inventory-overlay::-webkit-scrollbar-thumb {
+            background: #ff0080; /* Color rosa del botón */
+            border-radius: 10px;
+        }
+        #shop-overlay::-webkit-scrollbar-track, 
+        #inventory-overlay::-webkit-scrollbar-track {
+            background: #111;
+        }
+
+        #shop-overlay.active {
+            display: flex;
+        }
+
+        .shop-title {
+            font-size: 36px;
+            color: #00ffcc;
+            text-shadow: 0 0 20px #00ffcc;
+            margin-bottom: 10px;
+        }
+
+        .shop-subtitle {
+            font-size: 18px;
+            color: #ffcc00;
+            margin-bottom: 30px;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .shop-item {
+            background: rgba(0, 255, 204, 0.1);
+            border: 2px solid #00ffcc;
+            border-radius: 10px;
+            padding: 15px;
+            width: 180px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .shop-item:hover {
+            background: rgba(0, 255, 204, 0.3);
+            transform: scale(1.05);
+        }
+
+        .shop-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #666;
+        }
+
+        .shop-item.disabled:hover {
+            transform: none;
+            background: rgba(0, 255, 204, 0.1);
+        }
+
+        .shop-item.bought {
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        .shop-item-icon {
+            font-size: 30px;
+            margin-bottom: 5px;
+        }
+
+        .shop-item-name {
+            font-size: 14px;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .shop-item-level {
+            font-size: 12px;
+            color: #00ffcc;
+            margin-bottom: 5px;
+        }
+
+        .shop-item-cost {
+            font-size: 14px;
+            color: #ffcc00;
+        }
+
+        .shop-btn {
+            margin-top: 10px;
+            padding: 10px 30px;
+            font-size: 18px;
+            font-family: 'Bungee';
+            background: transparent;
+            color: #ff0080;
+            border: 3px solid #ff0080;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+
+        .shop-btn:hover {
+            background: #ff0080;
+            color: #fff;
+        }
+
+        @media (min-width: 1001px) {
+            #touch-controls { opacity: 0.5; }
+        }
+        
+        /* Lista de Guardado */
+        .save-slot {
+            display: flex; width: 100%; justify-content: space-between; gap: 10px; align-items: center;
+        }
+        .save-slot button { margin-top: 0; font-size: 14px; padding: 8px; }
+        
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="crt-overlay"></div>
+
+    <!-- Menú Principal -->
+    <div id="overlay">
+        <h1 id="overlay-title">Overdrive!</h1>
+        <p id="overlay-msg">
+            SISTEMA MEJORADO: FÍSICAS AVANZADAS Y GENERACIÓN LABERÍNTICA.<br><br>
+            Usa las paredes para impulsarte hacia arriba (Wall Jump).<br>
+            Recoge monedas y evita enemigos!
+        </p>
+        <button id="start-btn" onclick="startGame()">NUEVA PARTIDA</button>
+        <button id="load-btn" onclick="showLoadMenu()" style="border-color: #00ffcc; color: #00ffcc;">CARGAR PARTIDA</button>
+    </div>
+
+    <!-- Menú de Pausa / Guardar -->
+    <div id="pause-overlay" class="menu-overlay">
+        <h1 style="color: #00ffcc; text-shadow: 0 0 10px #00ffcc;">SISTEMA EN PAUSA</h1>
+        <input type="text" id="save-name" placeholder="Nombre de Partida" autocomplete="off" maxlength="15">
+        <button onclick="saveGame()" style="border-color: #00ffcc; color: #00ffcc;">💾 GUARDAR PARTIDA</button>
+        <button onclick="resumeGame()">▶ CONTINUAR</button>
+        <button onclick="goToMenu()" style="border-color: #ffaa00; color: #ffaa00;">SALIR AL MENÚ</button>
+    </div>
+
+    <!-- Menú de Cargar Partida -->
+    <div id="load-overlay" class="menu-overlay">
+        <h1 style="color: #ffaa00; text-shadow: 0 0 10px #ffaa00;">ARCHIVOS GUARDADOS</h1>
+        <div id="save-list" style="max-height: 250px; overflow-y: auto; width: 100%; max-width: 450px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; padding-right: 10px;"></div>
+        <button onclick="hideLoadMenu()">VOLVER</button>
+    </div>
+
+    <div class="ui">
+        <div id="score-display" style="font-size: 24px;">ZONA: 0</div>
+        <div id="coins-display" style="color: #ffcc00; font-size: 18px;">💰 0</div>
+        <div id="record-display" style="color: #ff0080; font-size: 14px;">MÁXIMO: 0</div>
+    </div>
+
+    <!-- Botón de Pausa Flotante -->
+    <button id="pause-btn" onclick="pauseGame()" style="position:absolute; top:20px; left:50%; transform:translateX(-50%); font-size:14px; padding:8px 15px; z-index:15; display:none; border-color: #00ffcc; color: #00ffcc;">⏸ PAUSA / GUARDAR</button>
+
+    <!-- Indicador de interacción con robot actualizado -->
+    <div id="interact-hint" onclick="openShop()" style="position: absolute; display: none; background: rgba(0,0,0,0.8); color: #00ffcc; padding: 10px 20px; border: 2px solid #00ffcc; border-radius: 20px; font-size: 14px; z-index: 45; pointer-events: auto; cursor: pointer; transform: translate(-50%, -100%); margin-top: -10px; font-family: 'Bungee', cursive;">
+        🛒 <b>[E]</b> o <b>TOCA AQUÍ</b>
+    </div>
+
+    <div class="ui-right">
+        <div id="dist-display" style="font-size: 18px;">📏 0m</div>
+        <div id="stylish-display" style="color: #00ffcc; font-size: 14px;"></div>
+        <div id="jetpack-fuel-display" style="color: #ffaa00; font-size: 12px; display: none;">🎒 <span id="fuel-text">100%</span></div>
+        <div id="shield-display" style="color: #00ccff; font-size: 14px; display: none;">🛡️ ESCUDO ACTIVO</div>
+        <div id="dog-hunger-display" style="color: #ff8800; font-size: 12px; display: none;">🐕 <span id="hunger-text">100%</span></div>
+    </div>
+
+    <div id="speed-bar-container"><div id="speed-bar"></div></div>
+    <canvas id="speedometer" width="120" height="120"></canvas>
+
+    <!-- Velocímetro en esquina superior derecha -->
+    <canvas id="speedometer-top" width="100" height="100"></canvas>
+
+    <!-- Overlay de Tienda -->
+    <div id="shop-overlay">
+        <div class="shop-title">🤖 ROBOT VENDEDOR</div>
+        <div class="shop-subtitle">Monedas: <span id="shop-coins">0</span></div>
+        <div class="shop-grid">
+            <div class="shop-item" id="shop-dash" onclick="buyUpgrade('dash')">
+                <div class="shop-item-icon">⚡</div>
+                <div class="shop-item-name">Dash Mejorado</div>
+                <div class="shop-item-level" id="dash-level">Nivel 0/3</div>
+                <div class="shop-item-cost" id="dash-cost">💰 20</div>
+            </div>
+            <div class="shop-item" id="shop-speed" onclick="buyUpgrade('speed')">
+                <div class="shop-item-icon">💨</div>
+                <div class="shop-item-name">Velocidad</div>
+                <div class="shop-item-level" id="speed-level">Nivel 0/3</div>
+                <div class="shop-item-cost" id="speed-cost">💰 25</div>
+            </div>
+            <div class="shop-item" id="shop-jump" onclick="buyUpgrade('jump')">
+                <div class="shop-item-icon">🚀</div>
+                <div class="shop-item-name">Salto Potente</div>
+                <div class="shop-item-level" id="jump-level">Nivel 0/3</div>
+                <div class="shop-item-cost" id="jump-cost">💰 20</div>
+            </div>
+            <div class="shop-item" id="shop-jetpack" onclick="buyUpgrade('jetpack')">
+                <div class="shop-item-icon">🎒</div>
+                <div class="shop-item-name">Jetpack</div>
+                <div class="shop-item-level" id="jetpack-level">Nivel 0/3</div>
+                <div class="shop-item-cost" id="jetpack-cost">💰 50</div>
+            </div>
+            <div class="shop-item" id="shop-dog" onclick="buyUpgrade('dog')">
+                <div class="shop-item-icon">🐕</div>
+                <div class="shop-item-name">Perro Guardian</div>
+                <div class="shop-item-level" id="dog-level">Comprar</div>
+                <div class="shop-item-cost" id="dog-cost">💰 100</div>
+            </div>
+            <div class="shop-item" id="shop-heal" onclick="buyUpgrade('heal')">
+                <div class="shop-item-icon">💾</div>
+                <div class="shop-item-name">Guardar Checkpoint</div>
+                <div class="shop-item-level" id="heal-level">Aquí mismo</div>
+                <div class="shop-item-cost" id="heal-cost">💰 10</div>
+            </div>
+            <div class="shop-item" id="shop-meat" onclick="buyUpgrade('meat')">
+                <div class="shop-item-icon">🥩</div>
+                <div class="shop-item-name">Carne para el Perro</div>
+                <div class="shop-item-level" id="meat-level">x0 en inv.</div>
+                <div class="shop-item-cost" id="meat-cost">💰 15</div>
+            </div>
+            <div class="shop-item" id="shop-magnet" onclick="buyUpgrade('magnet')">
+                <div class="shop-item-icon">🧲</div>
+                <div class="shop-item-name">Imán de Monedas</div>
+                <div class="shop-item-level" id="magnet-level">Comprar</div>
+                <div class="shop-item-cost" id="magnet-cost">💰 500</div>
+            </div>
+            <div class="shop-item" id="shop-rocket" onclick="buyUpgrade('rocket')">
+                <div class="shop-item-icon">🚀</div>
+                <div class="shop-item-name">Cohete Horizontal</div>
+                <div class="shop-item-level" id="rocket-level">Comprar</div>
+                <div class="shop-item-cost" id="rocket-cost">💰 500</div>
+            </div>
+            <div class="shop-item" id="shop-fuel" onclick="buyUpgrade('fuel')">
+                <div class="shop-item-icon">⛽</div>
+                <div class="shop-item-name">Gasolina (Jetpack/Rocket)</div>
+                <div class="shop-item-level" id="fuel-level">Recargar</div>
+                <div class="shop-item-cost" id="fuel-cost">💰 30</div>
+            </div>
+        </div>
+        <div style="color: #888; font-size: 12px; margin-bottom: 20px; max-width: 700px;">
+            🐕 El perro ataca enemigos | 🎒 Jetpack necesita gasolina | 🥩 Da carne al perro con [I] | 🧲 Atrae monedas | 🚀 Cohete horizontal | ⛽ Sin gasolina no hay potencia
+        </div>
+        <button class="shop-btn" onclick="closeShop()">VOLVER AL JUEGO</button>
+        <div style="margin-top:10px;font-size:11px;color:#555;">También puedes comprar y equip. animales en el 🎒 INVENTARIO [I]</div>
+    </div>
+
+    <!-- Overlay de Inventario -->
+    <div id="inventory-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,0.95);display:none;flex-direction:column;justify-content:center;align-items:center;z-index:55;text-align:center;overflow-y:auto;">
+        <div style="font-size:30px;color:#ffcc00;text-shadow:0 0 20px #ffcc00;margin-bottom:5px;">🎒 INVENTARIO</div>
+        <div style="font-size:12px;color:#888;margin-bottom:10px;">Presiona [I] o toca el botón para cerrar</div>
+
+        <!-- Tabs -->
+        <div style="display:flex;gap:10px;margin-bottom:15px;">
+            <button onclick="setInvTab('items')" id="tab-items" style="padding:8px 18px;font-family:'Bungee';font-size:13px;background:#ff0080;color:#fff;border:2px solid #ff0080;cursor:pointer;">ITEMS</button>
+            <button onclick="setInvTab('animals')" id="tab-animals" style="padding:8px 18px;font-family:'Bungee';font-size:13px;background:transparent;color:#ffcc00;border:2px solid #ffcc00;cursor:pointer;">ANIMALES</button>
+        </div>
+
+        <!-- Items Tab -->
+        <div id="inv-tab-items">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:20px;">
+            <div style="background:rgba(255,204,0,0.1);border:2px solid #ffcc00;border-radius:10px;padding:15px;width:160px;">
+                <div style="font-size:28px;">🥩</div>
+                <div style="font-size:14px;color:#fff;margin:5px 0;">Carne</div>
+                <div style="font-size:20px;color:#ffcc00;" id="inv-meat-count">x0</div>
+                <button onclick="feedDog()" style="margin-top:8px;padding:8px 15px;font-size:13px;font-family:'Bungee';background:transparent;color:#ff0080;border:2px solid #ff0080;cursor:pointer;" onmouseover="this.style.background='#ff0080';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#ff0080'">🐕 DAR AL COMPAÑERO</button>
+            </div>
+            <div style="background:rgba(0,255,204,0.1);border:2px solid #00ffcc;border-radius:10px;padding:15px;width:160px;">
+                <div style="font-size:28px;">🎒</div>
+                <div style="font-size:14px;color:#fff;margin:5px 0;">Jetpack</div>
+                <div style="font-size:13px;color:#ffaa00;" id="inv-jetpack-status">No desbloqueado</div>
+                <button onclick="toggleItem('jetpack')" id="inv-jetpack-btn" style="margin-top:8px;padding:8px 15px;font-size:13px;font-family:'Bungee';background:transparent;color:#00ffcc;border:2px solid #00ffcc;cursor:pointer;" onmouseover="this.style.background='#00ffcc';this.style.color='#000'" onmouseout="this.style.background='transparent';this.style.color='#00ffcc'">ACTIVAR</button>
+            </div>
+            <div style="background:rgba(255,0,128,0.1);border:2px solid #ff0080;border-radius:10px;padding:15px;width:160px;">
+                <div style="font-size:28px;">🚀</div>
+                <div style="font-size:14px;color:#fff;margin:5px 0;">Cohete</div>
+                <div style="font-size:13px;color:#ffaa00;" id="inv-rocket-status">No desbloqueado</div>
+                <button onclick="toggleItem('rocket')" id="inv-rocket-btn" style="margin-top:8px;padding:8px 15px;font-size:13px;font-family:'Bungee';background:transparent;color:#ff0080;border:2px solid #ff0080;cursor:pointer;" onmouseover="this.style.background='#ff0080';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#ff0080'">ACTIVAR</button>
+            </div>
+        </div>
+        <div style="background:rgba(255,170,0,0.1);border:2px solid #ffaa00;border-radius:10px;padding:15px;margin-bottom:20px;width:520px;">
+            <div style="font-size:14px;color:#ffaa00;">⛽ GASOLINA</div>
+            <div style="font-size:24px;color:#fff;margin:5px 0;" id="inv-fuel-bar-text">100%</div>
+            <div style="background:#111;height:12px;border-radius:6px;overflow:hidden;margin-top:5px;">
+                <div id="inv-fuel-bar" style="height:100%;background:linear-gradient(90deg,#ff4400,#ffaa00);transition:width 0.3s;width:100%;"></div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Animals Tab -->
+        <div id="inv-tab-animals" style="display:none;">
+            <div style="font-size:14px;color:#00ffcc;margin-bottom:10px;">Compañero activo: <span id="active-animal-name">Perro 🐕</span></div>
+            <div style="font-size:12px;color:#888;margin-bottom:10px;">Bioma actual: <span id="current-biome-name">FÁBRICA</span></div>
+            <div id="animal-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:600px;max-height:320px;overflow-y:auto;margin-bottom:15px;"></div>
+        </div>
+
+        <button onclick="closeInventory()" style="padding:10px 30px;font-size:18px;font-family:'Bungee';background:transparent;color:#ff0080;border:3px solid #ff0080;cursor:pointer;" onmouseover="this.style.background='#ff0080';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#ff0080'">CERRAR [I]</button>
+    </div>
+
+    <div id="touch-controls">
+        <div style="display: flex; gap: 20px;">
+            <div class="touch-btn" id="t-left">◀</div>
+            <div class="touch-btn" id="t-right">▶</div>
+        </div>
+        <div style="display: flex; gap: 10px; flex-direction:column; align-items:flex-end;">
+            <div style="display:flex;gap:10px;">
+                <div class="touch-btn btn-action" id="t-inv" style="font-size: 18px; border-color:#ffcc00; color:#ffcc00; background:rgba(255,204,0,0.15);">🎒</div>
+                <div class="touch-btn btn-action" id="t-rocket-touch" style="font-size: 18px;">🚀</div>
+            </div>
+            <div style="display:flex;gap:10px;">
+                <div class="touch-btn btn-action" id="t-dash" style="font-size: 18px;">DASH</div>
+                <div class="touch-btn btn-action" id="t-up">▲</div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+</div>
+
+<audio id="bg-music" loop>
+    <source src="main.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+// Overdrive Engine
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const speedoCanvas = document.getElementById('speedometer');
+const speedoCtx = speedoCanvas.getContext('2d');
+const speedoTopCanvas = document.getElementById('speedometer-top');
+const speedoTopCtx = speedoTopCanvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const scoreDisplay = document.getElementById('score-display');
+const coinsDisplay = document.getElementById('coins-display');
+const distDisplay = document.getElementById('dist-display');
+const recordDisplay = document.getElementById('record-display');
+const stylishDisplay = document.getElementById('stylish-display');
+const speedBar = document.getElementById('speed-bar');
+const bgMusic = document.getElementById('bg-music');
+const shopOverlay = document.getElementById('shop-overlay');
+const pauseBtn = document.getElementById('pause-btn');
+
+canvas.width = 900;
+canvas.height = 550;
+
+let gameActive = false;
+let frameCount = 0;
+let score = 0;
+let maxScore = 0;
+let screenShake = 0;
+let animationId = null;
+let coins = 0;
+let distance = 0;
+let lastCheckpoint = {x: 0, y: 100};
+let stylishCombo = 0;
+let stylishText = '';
+let stylishTimer = 0;
+
+const player = {
+    x: 0, y: 100, w: 26, h: 40,
+    dx: 0, dy: 0,
+    // --- FÍSICAS REEQUILIBRADAS v3.2 ---
+    accel: 0.35, airAccel: 0.25, maxSpeed: 7, jumpForce: -11, gravity: 0.45,
+    friction: 0.88, airFriction: 0.95, grounded: false, onWall: false,
+    wallDir: 0, wallSlideSpeed: 2, dashActive: false, dashCooldown: 0,
+    dashTimer: 0, wheelAngle: 0, wheelSpeed: 0, trail: [],
+    lastGroundedY: 100, maxHeight: 0, displaySpeed: 0, lastFacing: 1,
+    // Sistemas de asistencia de salto
+    jumpBufferCounter: 0, coyoteCounter: 0
+};
+let world = {
+    camX: 0, camY: 0,
+    blocks: [], spikes: [], checkpoints: [], buildings: [], coins: [], enemies: [], shopRobots: [],
+    lastChunkX: 0, lastChunkY: 200, minY: 200, maxY: 200,
+    generatedChunks: [],
+    isGenerated: false,
+    chunkCount: 0
+};
+
+let particles = [];
+const keys = {};
+
+// ========== SISTEMA DE MEJORAS ==========
+const upgrades = {
+    dash:    { level: 0, maxLevel: 100, baseCost: 20,  cost: 20,  name: 'Dash Mejorado' },
+    speed:   { level: 0, maxLevel: 100, baseCost: 25,  cost: 25,  name: 'Velocidad' },
+    jump:    { level: 0, maxLevel: 100, baseCost: 20,  cost: 20,  name: 'Salto Potente' },
+    jetpack: { level: 0, maxLevel: 100, baseCost: 50,  cost: 50,  name: 'Jetpack' },
+    dog:     { level: 0, maxLevel: 1,   baseCost: 100, cost: 100, name: 'Perro Guardian' },
+    heal:    { level: 0, maxLevel: 999, baseCost: 10,  cost: 10,  name: 'Checkpoint' },
+    meat:    { level: 0, maxLevel: 999, baseCost: 15,  cost: 15,  name: 'Carne' },
+    magnet:  { level: 0, maxLevel: 1,   baseCost: 500, cost: 500, name: 'Iman de Monedas' },
+    rocket:  { level: 0, maxLevel: 1,   baseCost: 500, cost: 500, name: 'Cohete Horizontal' },
+    fuel:    { level: 0, maxLevel: 999, baseCost: 30,  cost: 30,  name: 'Gasolina' }
+};
+
+let shopActive = false;
+
+// ========== SISTEMA DE ANIMALES (21 compañeros) ==========
+const ANIMALS = [
+    { id:'dog',     name:'Perro',      emoji:'🐕', cost:100,  desc:'Universal pero débil',      biomeBonus:'all',      speedMult:1.0, jumpMult:1.0, attackMult:1.0,  color:'#8B4513' },
+    { id:'lion',    name:'León',       emoji:'🦁', cost:300,  desc:'Feroz en la Sabana',         biomeBonus:'savanna',  speedMult:1.4, jumpMult:1.1, attackMult:2.5,  color:'#DAA520' },
+    { id:'whale',   name:'Ballena',    emoji:'🐋', cost:400,  desc:'Reina del Mar',              biomeBonus:'ocean',    speedMult:1.6, jumpMult:0.8, attackMult:2.0,  color:'#1E90FF' },
+    { id:'cat',     name:'Gato',       emoji:'🐱', cost:200,  desc:'Ágil en la Ciudad',          biomeBonus:'city',     speedMult:1.3, jumpMult:1.8, attackMult:1.2,  color:'#888' },
+    { id:'eagle',   name:'Águila',     emoji:'🦅', cost:350,  desc:'Domina el Cielo',            biomeBonus:'sky',      speedMult:1.5, jumpMult:2.5, attackMult:1.5,  color:'#8B4513' },
+    { id:'tiger',   name:'Tigre',      emoji:'🐯', cost:320,  desc:'Veloz en la Jungla',         biomeBonus:'jungle',   speedMult:1.8, jumpMult:1.3, attackMult:2.2,  color:'#FF8C00' },
+    { id:'bear',    name:'Oso',        emoji:'🐻', cost:280,  desc:'Fuerte en la Fábrica',       biomeBonus:'factory',  speedMult:1.1, jumpMult:0.9, attackMult:3.0,  color:'#8B4513' },
+    { id:'wolf',    name:'Lobo',       emoji:'🐺', cost:260,  desc:'Cazador del Desierto',       biomeBonus:'desert',   speedMult:1.6, jumpMult:1.2, attackMult:1.8,  color:'#888' },
+    { id:'shark',   name:'Tiburón',    emoji:'🦈', cost:380,  desc:'Terror del Océano',          biomeBonus:'ocean',    speedMult:1.9, jumpMult:0.7, attackMult:2.8,  color:'#4682B4' },
+    { id:'fox',     name:'Zorro',      emoji:'🦊', cost:220,  desc:'Astuto en Ciudad',           biomeBonus:'city',     speedMult:1.4, jumpMult:1.5, attackMult:1.3,  color:'#FF4500' },
+    { id:'panther', name:'Pantera',    emoji:'🐆', cost:340,  desc:'Sigilo en Jungla',           biomeBonus:'jungle',   speedMult:2.0, jumpMult:1.6, attackMult:2.0,  color:'#333' },
+    { id:'rhino',   name:'Rinoceronte',emoji:'🦏', cost:300,  desc:'Imparable en Sabana',        biomeBonus:'savanna',  speedMult:1.2, jumpMult:0.8, attackMult:3.5,  color:'#888' },
+    { id:'gorilla', name:'Gorila',     emoji:'🦍', cost:310,  desc:'Rey de la Jungla',           biomeBonus:'jungle',   speedMult:1.1, jumpMult:2.0, attackMult:2.8,  color:'#333' },
+    { id:'croc',    name:'Cocodrilo',  emoji:'🐊', cost:290,  desc:'Depredador del Pantano',     biomeBonus:'ocean',    speedMult:1.3, jumpMult:1.0, attackMult:2.6,  color:'#228B22' },
+    { id:'cheetah', name:'Guepardo',   emoji:'🐈', cost:360,  desc:'Más rápido en Sabana',       biomeBonus:'savanna',  speedMult:2.5, jumpMult:1.2, attackMult:1.5,  color:'#DAA520' },
+    { id:'bull',    name:'Toro',       emoji:'🐂', cost:250,  desc:'Arremete en el Desierto',    biomeBonus:'desert',   speedMult:1.5, jumpMult:0.9, attackMult:2.5,  color:'#8B0000' },
+    { id:'falcon',  name:'Halcón',     emoji:'🦅', cost:800,  desc:'Maestro del Cielo',          biomeBonus:'sky',      speedMult:2.2, jumpMult:2.2, attackMult:3.0,  color:'#8B4513' },
+    { id:'elephant',name:'Elefante',   emoji:'🐘', cost:270,  desc:'Titan de la Fábrica',        biomeBonus:'factory',  speedMult:1.0, jumpMult:0.8, attackMult:4.0,  color:'#888' },
+    { id:'monkey',  name:'Mono',       emoji:'🐒', cost:180,  desc:'Saltarín en Jungla',         biomeBonus:'jungle',   speedMult:1.3, jumpMult:2.8, attackMult:1.0,  color:'#8B4513' },
+    { id:'octopus', name:'Pulpo',      emoji:'🐙', cost:420,  desc:'Maestro del Mar',            biomeBonus:'ocean',    speedMult:1.4, jumpMult:1.4, attackMult:2.4,  color:'#800080' },
+    { id:'husky',   name:'Husky',      emoji:'🐕', cost:900,  desc:'Legendario universal',       biomeBonus:'all',      speedMult:2.0, jumpMult:2.0, attackMult:2.0,  color:'#4488cc' }
+];
+let unlockedAnimals = ['dog'];
+let activeAnimal = 'dog';
+let animalShopPage = 0;
+
+// ========== BIOMAS (7 tipos, cambian cada 10 zonas) ==========
+const BIOMES = [
+    { id:'factory', name:'FÁBRICA',    bg:'#020205', blockColor:'#0a0a15', blockBorder:'#00ffcc', skyTop:'#010108', skyBot:'#020210', fogColor:'rgba(0,255,204,0.03)' },
+    { id:'savanna', name:'SABANA',     bg:'#1a0e00', blockColor:'#3d2000', blockBorder:'#ffaa00', skyTop:'#ff6600', skyBot:'#ffcc00', fogColor:'rgba(255,170,0,0.05)' },
+    { id:'ocean',   name:'MAR',        bg:'#001833', blockColor:'#002244', blockBorder:'#0099ff', skyTop:'#001122', skyBot:'#0055aa', fogColor:'rgba(0,100,255,0.06)' },
+    { id:'city',    name:'CIUDAD',     bg:'#0a0a0a', blockColor:'#111122', blockBorder:'#ff0080', skyTop:'#050508', skyBot:'#111130', fogColor:'rgba(255,0,128,0.04)' },
+    { id:'jungle',  name:'JUNGLA',     bg:'#001a00', blockColor:'#0a2200', blockBorder:'#00ff44', skyTop:'#001100', skyBot:'#003300', fogColor:'rgba(0,255,68,0.05)' },
+    { id:'desert',  name:'DESIERTO',   bg:'#1a1000', blockColor:'#2a1a00', blockBorder:'#ffdd00', skyTop:'#3a1500', skyBot:'#552200', fogColor:'rgba(255,200,0,0.04)' },
+    { id:'sky',     name:'CIELO',      bg:'#000520', blockColor:'#001040', blockBorder:'#aaddff', skyTop:'#000033', skyBot:'#0011aa', fogColor:'rgba(150,200,255,0.05)' }
+];
+let currentBiome = 0;
+
+// ========== SISTEMA DE ENEMIGOS (tipos urbanos/industriales) ==========
+const ENEMY_TYPES = [
+    { id:'runner',    emoji:'🏃', w:28, h:35, hp:1,  speed:3,   color:'#ff4400', reward:5,  desc:'Corre rápido' },
+    { id:'jumper',    emoji:'🦘', w:28, h:28, hp:1,  speed:1,   color:'#00ff44', reward:5,  desc:'Salta mucho', jumpy:true },
+    { id:'speeder',   emoji:'💨', w:25, h:25, hp:1,  speed:5,   color:'#00ffcc', reward:8,  desc:'Muy veloz' },
+    { id:'tank',      emoji:'🛡',  w:40, h:35, hp:3,  speed:1,   color:'#888',    reward:15, desc:'Aguanta golpes' },
+    { id:'drone',     emoji:'🚁', w:28, h:20, hp:1,  speed:3,   color:'#660099', reward:8,  desc:'Vuela', flies:true },
+    { id:'bomber',    emoji:'💣', w:30, h:30, hp:1,  speed:2,   color:'#ff0000', reward:10, desc:'Explota al morir', explodes:true },
+    { id:'hazmat',    emoji:'☢',  w:30, h:30, hp:2,  speed:2,   color:'#cccc00', reward:12, desc:'Traje peligroso' },
+    { id:'slime',     emoji:'🟢', w:35, h:20, hp:2,  speed:1,   color:'#00cc00', reward:8,  desc:'Se divide', splits:true },
+    { id:'robot',     emoji:'🤖', w:32, h:32, hp:2,  speed:3,   color:'#4444ff', reward:12, desc:'Dispara' },
+    { id:'spike_mob', emoji:'⚙',  w:30, h:30, hp:1,  speed:2,   color:'#999',    reward:8,  desc:'Espinas' },
+    { id:'ninja',     emoji:'🥷', w:25, h:35, hp:1,  speed:6,   color:'#222',    reward:10, desc:'Rapidísimo' },
+    { id:'giant',     emoji:'🗿', w:50, h:50, hp:5,  speed:1,   color:'#666',    reward:25, desc:'Gigante' },
+    { id:'copter',    emoji:'🚁', w:22, h:18, hp:1,  speed:4,   color:'#440044', reward:7,  desc:'Dron enjambre', flies:true },
+    { id:'crab_mech', emoji:'🦾', w:35, h:25, hp:2,  speed:2,   color:'#cc2200', reward:10, desc:'Brazo mecánico' },
+    { id:'spider_bot',emoji:'🕷',  w:28, h:28, hp:2,  speed:3,   color:'#330033', reward:10, desc:'Robot araña' },
+    { id:'golem',     emoji:'🪨', w:45, h:45, hp:6,  speed:1,   color:'#887766', reward:30, desc:'Pedrusco' },
+    { id:'wasp_bot',  emoji:'🐝', w:22, h:22, hp:1,  speed:5,   color:'#ffcc00', reward:8,  desc:'Vuela rápido', flies:true },
+    { id:'surfer',    emoji:'🏄', w:28, h:20, hp:1,  speed:4,   color:'#0088ff', reward:7,  desc:'Salta del suelo' },
+    { id:'biker',     emoji:'🏍', w:40, h:18, hp:2,  speed:5,   color:'#226600', reward:10, desc:'Motorista' },
+    { id:'brute',     emoji:'💪', w:30, h:38, hp:2,  speed:1.5, color:'#446644', reward:10, desc:'Lento pero duro' },
+    { id:'sniper',    emoji:'🎯', w:28, h:38, hp:2,  speed:2,   color:'#440088', reward:15, desc:'Dispara de lejos' },
+    { id:'armored',   emoji:'🦺', w:28, h:35, hp:3,  speed:2,   color:'#ddddcc', reward:12, desc:'Blindado' },
+    { id:'heavyweight',emoji:'🏋', w:45, h:40, hp:4,  speed:2,   color:'#228B22', reward:20, desc:'Peso pesado' },
+    { id:'hacker',    emoji:'💻', w:28, h:32, hp:3,  speed:4,   color:'#00ff88', reward:15, desc:'Sabotea sistemas' },
+    { id:'flamethrower',emoji:'🔥',w:40, h:35, hp:4,  speed:2,   color:'#cc2200', reward:20, desc:'Lanzallamas' },
+    { id:'cryo',      emoji:'❄',  w:32, h:32, hp:3,  speed:1,   color:'#aaddff', reward:12, desc:'Congela' },
+    { id:'electric',  emoji:'⚡', w:28, h:32, hp:2,  speed:4,   color:'#ffff00', reward:12, desc:'Eléctrico' },
+    { id:'toxic_runner',emoji:'☣', w:30, h:35, hp:2, speed:1.5, color:'#cc4400', reward:10, desc:'Tóxico' },
+    { id:'digger',    emoji:'⛏',  w:28, h:25, hp:2,  speed:2,   color:'#886644', reward:10, desc:'Sale del suelo' },
+    { id:'hover_bot', emoji:'🛸', w:30, h:30, hp:2,  speed:2,   color:'#ff88ff', reward:10, desc:'Flota', flies:true },
+    { id:'soldier',   emoji:'💂', w:35, h:28, hp:3,  speed:2,   color:'#994400', reward:15, desc:'Soldado pesado' },
+    { id:'berserker', emoji:'😤', w:32, h:35, hp:3,  speed:3,   color:'#cc0000', reward:15, desc:'Furioso' },
+    { id:'mech',      emoji:'🤖', w:40, h:45, hp:5,  speed:2,   color:'#2244cc', reward:25, desc:'Mecánico' },
+    { id:'jetpack_e', emoji:'🚀', w:32, h:32, hp:3,  speed:4,   color:'#ff4400', reward:18, desc:'Jetpack', flies:true },
+    { id:'colossus',  emoji:'🦾', w:50, h:40, hp:6,  speed:1,   color:'#880088', reward:35, desc:'Colosal' }
+];
+
+// ========== SISTEMA DE JEFES (30 tipos industriales/urbanos) ==========
+const BOSS_TYPES = [
+    { id:'iron_titan',    name:'TITAN DE ACERO',     emoji:'🤖', hp:80,  weakness:'jump',   reward:200, color:'#887766', w:80, h:80,  phase2speed:3 },
+    { id:'turbo_mech',    name:'MECA TURBO',          emoji:'⚙',  hp:100, weakness:'dash',   reward:250, color:'#cc2200', w:90, h:70,  phase2speed:4 },
+    { id:'mech_titan',    name:'TITAN MECANICO',      emoji:'🦾', hp:120, weakness:'stomp',  reward:300, color:'#2244cc', w:100,h:90,  phase2speed:2 },
+    { id:'colossus_boss', name:'COLOSUS INDUSTRIAL',  emoji:'🏗',  hp:90,  weakness:'dash',   reward:220, color:'#880088', w:90, h:80,  phase2speed:3 },
+    { id:'pyro_boss',     name:'JEFE PIROMANO',       emoji:'🔥', hp:70,  weakness:'jump',   reward:180, color:'#ff4400', w:60, h:80,  phase2speed:5 },
+    { id:'cryo_boss',     name:'JEFE CRIOGENICO',     emoji:'❄',  hp:150, weakness:'speed',  reward:350, color:'#aaddff', w:110,h:100, phase2speed:2 },
+    { id:'storm_boss',    name:'JEFE ELECTRICO',      emoji:'⚡', hp:80,  weakness:'jump',   reward:200, color:'#ffff00', w:70, h:80,  phase2speed:4 },
+    { id:'shadow_mech',   name:'MECA SOMBRA',         emoji:'🕶',  hp:95,  weakness:'dash',   reward:230, color:'#220033', w:80, h:85,  phase2speed:4 },
+    { id:'heavy_armor',   name:'BLINDADO PESADO',     emoji:'🛡',  hp:110, weakness:'stomp',  reward:270, color:'#446644', w:85, h:90,  phase2speed:2 },
+    { id:'turbo_racer',   name:'CORREDOR TURBOJEFE',  emoji:'🏎', hp:100, weakness:'speed',  reward:250, color:'#00ff88', w:80, h:90,  phase2speed:5 },
+    { id:'crusher_boss',  name:'TRITURADOR',          emoji:'⚙',  hp:130, weakness:'jump',   reward:300, color:'#228B22', w:100,h:90,  phase2speed:3 },
+    { id:'riot_boss',     name:'JEFE ANTIMOTINES',    emoji:'💂', hp:140, weakness:'dash',   reward:320, color:'#cc0000', w:90, h:95,  phase2speed:4 },
+    { id:'spider_mech',   name:'MECA ARANA',          emoji:'🕷',  hp:85,  weakness:'stomp',  reward:210, color:'#330033', w:80, h:75,  phase2speed:4 },
+    { id:'volcano_boss',  name:'JEFE VOLCANICO',      emoji:'🌋', hp:160, weakness:'speed',  reward:380, color:'#ff3300', w:110,h:110, phase2speed:2 },
+    { id:'jet_boss',      name:'JEFE REACTOR',        emoji:'✈',  hp:75,  weakness:'jump',   reward:190, color:'#ccccff', w:70, h:80,  phase2speed:6 },
+    { id:'armored_boss',  name:'JEFE BLINDADO MAX',   emoji:'🦺', hp:100, weakness:'dash',   reward:240, color:'#ddddcc', w:80, h:90,  phase2speed:3 },
+    { id:'sub_boss',      name:'JEFE SUBMARINO',      emoji:'🚢', hp:120, weakness:'stomp',  reward:280, color:'#4682B4', w:100,h:80,  phase2speed:3 },
+    { id:'toxic_boss',    name:'JEFE TOXICO',         emoji:'☣',  hp:90,  weakness:'speed',  reward:220, color:'#44aa00', w:70, h:85,  phase2speed:4 },
+    { id:'orbital_boss',  name:'JEFE ORBITAL',        emoji:'🛸', hp:115, weakness:'jump',   reward:260, color:'#0044ff', w:85, h:90,  phase2speed:3 },
+    { id:'drill_boss',    name:'JEFE PERFORADORA',    emoji:'⛏',  hp:105, weakness:'dash',   reward:250, color:'#88ddff', w:80, h:85,  phase2speed:3 },
+    { id:'swamp_mech',    name:'MECA PANTANOSO',      emoji:'🏗',  hp:95,  weakness:'stomp',  reward:230, color:'#336633', w:85, h:85,  phase2speed:3 },
+    { id:'robot_overlord',name:'ROBOT SUPREMO',       emoji:'🤖', hp:135, weakness:'speed',  reward:310, color:'#4444ff', w:100,h:95,  phase2speed:3 },
+    { id:'nuke_boss',     name:'JEFE NUCLEAR',        emoji:'💥', hp:80,  weakness:'jump',   reward:200, color:'#88cc00', w:90, h:70,  phase2speed:2 },
+    { id:'stealth_boss',  name:'JEFE SIGILO',         emoji:'👤', hp:110, weakness:'dash',   reward:260, color:'#110022', w:80, h:90,  phase2speed:5 },
+    { id:'plasma_boss',   name:'JEFE PLASMA',         emoji:'🔴', hp:145, weakness:'stomp',  reward:340, color:'#ffcc00', w:100,h:100, phase2speed:4 },
+    { id:'sentry_boss',   name:'CENTINELA BOSS',      emoji:'🎯', hp:88,  weakness:'speed',  reward:215, color:'#8888cc', w:75, h:80,  phase2speed:5 },
+    { id:'rail_boss',     name:'JEFE FERROVIARIO',    emoji:'🚂', hp:105, weakness:'jump',   reward:250, color:'#4488aa', w:85, h:80,  phase2speed:4 },
+    { id:'swarm_boss',    name:'ENJAMBRE MECA',       emoji:'🔩', hp:125, weakness:'dash',   reward:290, color:'#775500', w:95, h:85,  phase2speed:3 },
+    { id:'ultra_mech',    name:'ULTRAMECA',           emoji:'🦾', hp:170, weakness:'stomp',  reward:400, color:'#888888', w:120,h:100, phase2speed:3 },
+    { id:'chaos_engine',  name:'MOTOR DEL CAOS',      emoji:'🌀', hp:200, weakness:'speed',  reward:500, color:'#ff00ff', w:120,h:110, phase2speed:4 }
+];
+
+let activeBoss = null;
+let bossArena = null; // {x1, x2} arena bounds
+let bossActive = false;
+let zonesCleared = 0;
+let inventoryActive = false;
+let meatInventory = 0;
+let magnetUnlocked = false;
+let magnetActive = true;
+let rocketUnlocked = false;
+let rocketActive = true;
+let rocketFuel = 0;
+let jetpackEnabled = true; // can be toggled in inventory
+let rocketEnabled = true;
+let shieldActive = false;
+let shieldTimer = 0;
+let speedLines = [];
+let dogHunger = 100; // 0-100, drops over time when dog is active
+let lastHungerDrop = 0;
+
+// ========== EL PERRO GUARDIAN ==========
+const dog = {
+    x: 0, y: 0, w: 35, h: 25,
+    vx: 0, vy: 0,
+    targetEnemy: null,
+    state: 'follow',
+    animFrame: 0,
+    facing: 1,
+    cooldown: 0,
+    jumpCooldown: 0,
+    unlocked: false  // Solo aparece si se compra
+};
+
+window.onkeydown = (e) => {
+    // Gestor de Escape para Menú de Pausa
+    if (e.code === 'Escape') {
+        if (gameActive && !shopActive) pauseGame();
+        else if (document.getElementById('pause-overlay').style.display === 'flex') resumeGame();
+    }
+    if (e.code === 'KeyI') {
+        if (inventoryActive) closeInventory();
+        else if (gameActive && !shopActive) openInventory();
+    }
+    keys[e.code] = true;
+};
+window.onkeyup = (e) => keys[e.code] = false;
+
+function setupTouch(id, code) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const press = (e) => { e.preventDefault(); keys[code] = true; };
+    const release = (e) => { e.preventDefault(); keys[code] = false; };
+    
+    // Eventos para pantallas táctiles (Móvil)
+    btn.addEventListener('touchstart', press, {passive: false});
+    btn.addEventListener('touchend', release, {passive: false});
+    btn.addEventListener('touchcancel', release, {passive: false}); // Evita que se trabe
+    
+    // Eventos para clicks (Para que puedas probarlo con el ratón en la PC)
+    btn.addEventListener('mousedown', press);
+    btn.addEventListener('mouseup', release);
+    btn.addEventListener('mouseleave', release);
+}
+
+setupTouch('t-left', 'KeyA');
+setupTouch('t-right', 'KeyD');
+setupTouch('t-up', 'KeyW');
+setupTouch('t-dash', 'Enter');
+setupTouch('t-rocket-touch', 'KeyR');
+
+// Touch for inventory (tap to open/close)
+const toggleInv = (e) => {
+    e.preventDefault();
+    if (inventoryActive) closeInventory();
+    else if (gameActive && !shopActive) openInventory();
+};
+const btnInv = document.getElementById('t-inv');
+btnInv.addEventListener('touchstart', toggleInv, {passive: false});
+btnInv.addEventListener('mousedown', toggleInv);
+
+function showStylish(text, color = '#00ffcc') {
+    stylishCombo++;
+    stylishText = text + (stylishCombo > 1 ? ` x${stylishCombo}` : '');
+    stylishTimer = 60;
+
+    const div = document.createElement('div');
+    div.className = 'stylish-text';
+    div.textContent = text;
+    div.style.color = color;
+    div.style.left = (canvas.width / 2 + (Math.random() - 0.5) * 200) + 'px';
+    div.style.top = (canvas.height / 2 - 50 + (Math.random() - 0.5) * 100) + 'px';
+    document.getElementById('game-container').appendChild(div);
+    setTimeout(() => div.remove(), 1000);
+}
+
+function playSound(type) {
+    if (!type) return;
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        switch(type) {
+            case 'jump':
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                break;
+            case 'coin':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                break;
+            case 'dash':
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                break;
+            case 'checkpoint':
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                break;
+            case 'kill':
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                break;
+        }
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+    } catch(e) {}
+}
+
+// ========== SISTEMA DE PARTIDAS Y GUARDADO ==========
+function pauseGame() {
+    if (!gameActive && !shopActive) return;
+    gameActive = false;
+    document.getElementById('pause-overlay').style.display = 'flex';
+    document.getElementById('save-name').value = `Partida_Zona_${score}`;
+}
+
+function resumeGame() {
+    document.getElementById('pause-overlay').style.display = 'none';
+    gameActive = true;
+}
+
+function goToMenu() {
+    document.getElementById('pause-overlay').style.display = 'none';
+    pauseBtn.style.display = 'none';
+    overlay.style.display = 'flex';
+    bgMusic.pause();
+}
+
+function saveGame() {
+    const name = document.getElementById('save-name').value.trim() || 'AutoSave';
+    
+    // Empaquetar todo el estado del juego actual
+    const saveData = {
+        world: world,
+        player: player,
+        upgrades: upgrades,
+        dog: dog,
+        coins: coins,
+        score: score,
+        distance: distance,
+        maxScore: maxScore,
+        lastCheckpoint: lastCheckpoint
+    };
+
+    let saves = {};
+    try {
+        saves = JSON.parse(localStorage.getItem('so_saves')) || {};
+    } catch(e) {}
+
+    saves[name] = saveData;
+    localStorage.setItem('so_saves', JSON.stringify(saves));
+    
+    showStylish('PARTIDA GUARDADA', '#00ffcc');
+    playSound('checkpoint');
+    resumeGame();
+}
+
+function showLoadMenu() {
+    overlay.style.display = 'none';
+    document.getElementById('load-overlay').style.display = 'flex';
+    
+    const list = document.getElementById('save-list');
+    list.innerHTML = '';
+    
+    let saves = {};
+    try {
+        saves = JSON.parse(localStorage.getItem('so_saves')) || {};
+    } catch(e) {}
+
+    const keys = Object.keys(saves);
+    if (keys.length === 0) {
+        list.innerHTML = '<p style="color:#ff0080; font-family:\'Bungee\'">No hay partidas guardadas.</p>';
+        return;
+    }
+
+    keys.forEach(key => {
+        const slot = document.createElement('div');
+        slot.className = 'save-slot';
+
+        const btn = document.createElement('button');
+        btn.textContent = `💾 ${key} (ZONA ${saves[key].score})`;
+        btn.style.width = '100%';
+        btn.style.borderColor = '#00ffcc';
+        btn.style.color = '#00ffcc';
+        btn.onclick = () => loadGame(saves[key]);
+        
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '❌';
+        delBtn.style.borderColor = '#ff0080';
+        delBtn.style.color = '#ff0080';
+        delBtn.onclick = (e) => {
+            e.stopPropagation();
+            delete saves[key];
+            localStorage.setItem('so_saves', JSON.stringify(saves));
+            showLoadMenu();
+        };
+
+        slot.appendChild(btn);
+        slot.appendChild(delBtn);
+        list.appendChild(slot);
+    });
+}
+
+function hideLoadMenu() {
+    document.getElementById('load-overlay').style.display = 'none';
+    overlay.style.display = 'flex';
+}
+
+function loadGame(saveData) {
+    // Restaurar los objetos
+    world = saveData.world;
+    Object.assign(player, saveData.player);
+    
+    // Restaurar mejoras profundamente para conservar referencias
+    for (let key in saveData.upgrades) {
+        if (upgrades[key]) Object.assign(upgrades[key], saveData.upgrades[key]);
+    }
+    
+    Object.assign(dog, saveData.dog);
+    coins = saveData.coins;
+    score = saveData.score;
+    distance = saveData.distance;
+    maxScore = saveData.maxScore;
+    lastCheckpoint = saveData.lastCheckpoint;
+
+    // Cerrar UIs
+    hideLoadMenu();
+    overlay.style.display = 'none';
+    document.getElementById('pause-overlay').style.display = 'none';
+    
+    // Resetear estados dinámicos
+    particles = [];
+    stylishCombo = 0;
+    for(let k in keys) keys[k] = false;
+    
+    pauseBtn.style.display = 'block';
+    gameActive = true;
+    
+    bgMusic.currentTime = 0;
+    bgMusic.play().catch(e => console.log('Audio autoplay blocked'));
+
+    respawnAtCheckpoint();
+    updateShopUI(); // Sincronizar niveles de tienda
+
+    if (!animationId) loop();
+}
+
+// ========== HELPERS DE BIOMA ==========
+function getCurrentBiome() {
+    return BIOMES[currentBiome % BIOMES.length];
+}
+function getBiomeForZone(zone) {
+    return BIOMES[Math.floor(zone / 10) % BIOMES.length];
+}
+function updateBiome() {
+    const b = Math.floor(score / 10) % BIOMES.length;
+    if (b !== currentBiome) {
+        currentBiome = b;
+        const biome = BIOMES[currentBiome];
+        showStylish('🌍 ' + biome.name, '#ffcc00');
+    }
+}
+
+// ========== HELPERS DE ANIMAL ==========
+function getActiveAnimalData() {
+    return ANIMALS.find(a => a.id === activeAnimal) || ANIMALS[0];
+}
+function getAnimalMultiplier(stat) {
+    const a = getActiveAnimalData();
+    const biome = getCurrentBiome();
+    const isBonus = (a.biomeBonus === 'all' || a.biomeBonus === biome.id);
+    const boost = isBonus ? 1.5 : 1.0;
+    if (stat === 'speed') return a.speedMult * boost;
+    if (stat === 'jump') return a.jumpMult * boost;
+    if (stat === 'attack') return a.attackMult * boost;
+    return 1.0;
+}
+
+// ========== FUNCIÓN PARA GENERAR ENEMIGO ACORDE AL BIOMA ==========
+function getBiomeEnemyTypes() {
+    const biome = getCurrentBiome();
+    const map = {
+        factory: ['robot','mech','spike_mob','golem','electric','mech'],
+        savanna: ['heavyweight','soldier','biker','runner','speeder','giant'],
+        ocean:   ['surfer','hover_bot','colossus','crab_mech','jetpack_e','slime'],
+        city:    ['ninja','brute','berserker','hazmat','sniper','armored'],
+        jungle:  ['spider_bot','toxic_runner','wasp_bot','flamethrower','digger','biker'],
+        desert:  ['soldier','biker','digger','runner','cryo','tank'],
+        sky:     ['drone','copter','wasp_bot','jetpack_e','hover_bot','electric']
+    };
+    return map[biome.id] || ['runner','speeder','tank','jumper','robot'];
+}
+
+// ========== SISTEMA DE JEFES ==========
+function spawnBoss() {
+    if (bossActive) return;
+    const bossIndex = Math.floor(score / 20) % BOSS_TYPES.length;
+    const bossData = BOSS_TYPES[bossIndex];
+    const bx = world.lastChunkX + 200;
+    const arenaY = world.lastChunkY;
+    const arenaW = 1400;
+
+    activeBoss = {
+        ...bossData,
+        x: bx + arenaW/2 - bossData.w/2,
+        y: arenaY - bossData.h - 10,
+        currentHp: bossData.hp,
+        maxHp: bossData.hp,
+        vx: 2, vy: 0,
+        facing: -1,
+        anim: 0,
+        phase: 1,
+        dead: false,
+        grounded: false,
+        attackTimer: 0,
+        hitFlash: 0,
+        limbAnim: 0,
+        attackState: 'idle',
+        attackCooldown: 0,
+        punchR: 0, punchL: 0,
+        kickR: 0,  kickL: 0,
+        chargeVx: 0
+    };
+
+    bossArena = { x1: bx, x2: bx + arenaW, floorY: arenaY, barriersActive: false };
+
+    // Plataforma plana principal
+    world.blocks.push({ x: bx - 50, y: arenaY, w: arenaW + 100, h: 40, neon: '#ff0080', isArenaFloor: true });
+
+    // 3 mini plataformas
+    world.blocks.push({ x: bx + 120,         y: arenaY - 150, w: 180, h: 18, neon: '#ff4400', isArenaFloor: true });
+    world.blocks.push({ x: bx + arenaW/2-90, y: arenaY - 220, w: 180, h: 18, neon: '#ff4400', isArenaFloor: true });
+    world.blocks.push({ x: bx + arenaW-300,  y: arenaY - 150, w: 180, h: 18, neon: '#ff4400', isArenaFloor: true });
+
+    // Checkpoint INVISIBLE en el centro (jugador reaparece aquí si muere dentro)
+    world.checkpoints.push({ x: bx + arenaW/2, y: arenaY - 10, active: true, invisible: true, isBossCP: true });
+    lastCheckpoint = { x: bx + arenaW/2 - 13, y: arenaY - 50 };
+
+    // Las barreras se definen pero NO se añaden todavía — se añaden cuando el jugador entre
+    const barrierTop = arenaY - 1000;
+    const barrierH = 1050;
+    bossArena.barriers = [
+        { x: bx - 32,      y: barrierTop, w: 32, h: barrierH, neon: '#ff0080', isBarrier: true },
+        { x: bx + arenaW,  y: barrierTop, w: 32, h: barrierH, neon: '#ff0080', isBarrier: true }
+    ];
+
+    bossActive = true;
+    showStylish('⚠️ JEFE: ' + bossData.name, '#ff0080');
+    spawnParticles((bossArena.x1 + bossArena.x2)/2, arenaY - 80, '#ff0080', 40, 10);
+    screenShake = 30;
+}
+
+function updateBoss() {
+    if (!bossActive || !activeBoss || activeBoss.dead) return;
+    const b = activeBoss;
+    b.anim++;
+    b.limbAnim++;
+
+    // === ACTIVAR BARRERAS cuando el jugador entre a la arena ===
+    if (!bossArena.barriersActive &&
+        player.x + player.w > bossArena.x1 && player.x < bossArena.x2) {
+        bossArena.barriersActive = true;
+        world.blocks.push(...bossArena.barriers);
+        showStylish('🔒 SIN ESCAPE!', '#ff0080');
+        spawnParticles(bossArena.x1, bossArena.floorY - 300, '#ff0080', 20, 8);
+        spawnParticles(bossArena.x2, bossArena.floorY - 300, '#ff0080', 20, 8);
+    }
+
+    // === FÍSICA DEL JEFE ===
+    b.vy += 0.45;
+    b.y += b.vy;
+    b.grounded = false;
+    for (let bl of world.blocks) {
+        if (bl.isBarrier) continue;
+        if (b.x < bl.x + bl.w && b.x + b.w > bl.x && b.y < bl.y + bl.h && b.y + b.h > bl.y) {
+            if (b.vy > 0) { b.y = bl.y - b.h; b.vy = 0; b.grounded = true; }
+            else { b.y = bl.y + bl.h; b.vy = 0.1; }
+        }
+    }
+
+    // === MOVIMIENTO BASE Y ATAQUES INTELIGENTES ===
+    if (b.attackCooldown > 0) b.attackCooldown--;
+
+    const px = player.x + player.w/2;
+    const bCx = b.x + b.w/2;
+    const distToPlayer = Math.abs(px - bCx);
+    const playerAbove = player.y + player.h < b.y + b.h * 0.5;
+
+    // Orientarse hacia el jugador
+    if (px < bCx) b.facing = -1; else b.facing = 1;
+
+    if (b.grounded) {
+        const spd = b.phase === 2 ? b.phase2speed : 2;
+
+        // --- DECIDIR ATAQUE ---
+        if (b.attackCooldown <= 0) {
+            const r = Math.random();
+            if (distToPlayer < 120) {
+                // Cerca: puñetazo o patada
+                if (r < 0.4) {
+                    b.attackState = 'punch_r'; b.punchR = 0;
+                    b.attackCooldown = 60 + Math.floor(Math.random()*40);
+                } else if (r < 0.7) {
+                    b.attackState = 'punch_l'; b.punchL = 0;
+                    b.attackCooldown = 60 + Math.floor(Math.random()*40);
+                } else if (r < 0.85) {
+                    b.attackState = 'kick_r'; b.kickR = 0;
+                    b.attackCooldown = 70 + Math.floor(Math.random()*30);
+                } else {
+                    b.attackState = 'kick_l'; b.kickL = 0;
+                    b.attackCooldown = 70 + Math.floor(Math.random()*30);
+                }
+            } else if (distToPlayer > 300 && r < 0.3) {
+                // Lejos: carga hacia el jugador
+                b.attackState = 'charge';
+                b.chargeVx = b.facing * (spd * 4);
+                b.attackCooldown = 90;
+            }
+        }
+
+        // --- EJECUTAR ATAQUE ---
+        if (b.attackState === 'punch_r') {
+            b.punchR = Math.min(b.punchR + 5, 30);
+            if (b.punchR >= 30) { b.attackState = 'idle'; b.punchR = 0; }
+        } else if (b.attackState === 'punch_l') {
+            b.punchL = Math.min(b.punchL + 5, 30);
+            if (b.punchL >= 30) { b.attackState = 'idle'; b.punchL = 0; }
+        } else if (b.attackState === 'kick_r') {
+            b.kickR = Math.min(b.kickR + 4, 28);
+            if (b.kickR >= 28) { b.attackState = 'idle'; b.kickR = 0; }
+        } else if (b.attackState === 'kick_l') {
+            b.kickL = Math.min(b.kickL + 4, 28);
+            if (b.kickL >= 28) { b.attackState = 'idle'; b.kickL = 0; }
+        } else if (b.attackState === 'charge') {
+            b.x += b.chargeVx;
+            if (Math.abs(b.chargeVx) > 0.5) b.chargeVx *= 0.9;
+            else { b.attackState = 'idle'; b.chargeVx = 0; }
+        } else {
+            // Movimiento normal
+            b.x += b.facing * spd;
+        }
+
+        // Rebotar en paredes de arena
+        if (b.x < bossArena.x1 + 10) { b.x = bossArena.x1 + 10; b.facing = 1; }
+        if (b.x + b.w > bossArena.x2 - 10) { b.x = bossArena.x2 - b.w - 10; b.facing = -1; }
+
+        // Saltar si el jugador está arriba
+        if (playerAbove && b.anim % 90 === 0) { b.vy = -12; }
+    }
+
+    if (b.hitFlash > 0) b.hitFlash--;
+
+    // Fase 2 al 50% HP
+    if (b.currentHp <= b.maxHp * 0.5 && b.phase === 1) {
+        b.phase = 2;
+        showStylish('💢 FASE 2: ' + b.name, '#ff0080');
+        spawnParticles(b.x + b.w/2, b.y + b.h/2, '#ff0080', 30, 8);
+    }
+
+    // === COLISIÓN CON JUGADOR ===
+    if (player.x + player.w > b.x && player.x < b.x + b.w &&
+        player.y + player.h > b.y && player.y < b.y + b.h) {
+        const weakness = b.weakness;
+        let hit = false;
+        if (weakness === 'jump' && player.dy > 2 && player.y + player.h < b.y + b.h * 0.4) {
+            hit = true; player.dy = -10;
+        } else if (weakness === 'dash' && player.dashActive) {
+            hit = true;
+        } else if (weakness === 'stomp' && player.dy > 0 && player.y + player.h < b.y + b.h / 2) {
+            hit = true; player.dy = player.jumpForce * 0.7;
+        } else if (weakness === 'speed' && player.displaySpeed >= 150) {
+            hit = true;
+        }
+        if (hit) {
+            const dmg = getAnimalMultiplier('attack') * (1 + upgrades.dash.level * 0.05);
+            b.currentHp -= dmg;
+            b.hitFlash = 15;
+            spawnParticles(b.x + b.w/2, b.y + b.h/2, '#ff0080', 15, 6);
+            showStylish('💥 HIT! -' + Math.ceil(dmg), '#ff4400');
+            playSound('kill');
+            if (b.currentHp <= 0) {
+                b.dead = true;
+                bossActive = false;
+                zonesCleared += 20;
+                coins += b.reward;
+                showStylish('🏆 JEFE DERROTADO! +' + b.reward, '#ffcc00');
+                spawnParticles(b.x + b.w/2, b.y, '#ffcc00', 60, 12);
+                screenShake = 40;
+                playSound('checkpoint');
+                if (bossArena && bossArena.barriers) {
+                    world.blocks = world.blocks.filter(bl => !bossArena.barriers.includes(bl));
+                }
+                bossArena = null;
+            }
+        } else if (!shieldActive) {
+            respawnAtCheckpoint();
+        } else {
+            spawnParticles(player.x + player.w/2, player.y, '#00ccff', 10, 5);
+            showStylish('🛡️ ESCUDO TE SALVO!', '#00ccff');
+        }
+    }
+}
+
+function drawBoss() {
+    if (!bossActive || !activeBoss || activeBoss.dead) return;
+    const b = activeBoss;
+    ctx.save();
+    ctx.translate(b.x + b.w/2, b.y + b.h/2);
+    ctx.scale(b.facing, 1);
+
+    if (b.hitFlash > 0 && Math.floor(b.hitFlash / 3) % 2 === 0) ctx.globalAlpha = 0.35;
+
+    const C  = b.phase === 2 ? '#ff2200' : b.color;
+    const C2 = b.phase === 2 ? '#ff6600' : (b.color === '#2244cc' ? '#4466ff' : '#888');
+    const glow = b.phase === 2 ? 25 : 10;
+    const W = b.w, H = b.h;
+    const hw = W/2, hh = H/2;
+
+    // Animaciones de extremidades
+    const pr = b.punchR || 0;
+    const pl = b.punchL || 0;
+    const kr = b.kickR  || 0;
+    const kl = b.kickL  || 0;
+    const walk = Math.sin(b.limbAnim * 0.18) * 8;
+
+    ctx.shadowBlur = glow;
+    ctx.shadowColor = C;
+
+    // --- PIERNAS ---
+    // Pierna derecha
+    ctx.fillStyle = C;
+    const legRY = hh - 14 + (kr > 0 ? -kr * 0.6 : walk * 0.5);
+    const legRX = hw * 0.3 + (kr > 0 ? kr * 0.8 : 0);
+    ctx.fillRect(hw * 0.05, legRY, W * 0.28, H * 0.32);
+    // Pie derecho
+    ctx.fillStyle = C2;
+    ctx.fillRect(hw * 0.05 + (kr > 0 ? kr * 0.9 : 0), legRY + H*0.28, W*0.3, H*0.1);
+
+    // Pierna izquierda
+    ctx.fillStyle = C;
+    const legLY = hh - 14 + (kl > 0 ? -kl * 0.6 : -walk * 0.5);
+    const legLX = -(hw * 0.05 + W * 0.28) + (kl > 0 ? -kl * 0.8 : 0);
+    ctx.fillRect(legLX, legLY, W * 0.28, H * 0.32);
+    // Pie izquierdo
+    ctx.fillStyle = C2;
+    ctx.fillRect(legLX - (kl > 0 ? kl * 0.9 : 0), legLY + H*0.28, W*0.3, H*0.1);
+
+    // --- CUERPO (torso) ---
+    ctx.fillStyle = C;
+    ctx.fillRect(-hw * 0.75, -hh * 0.55, W * 0.75, H * 0.55);
+
+    // Detalle del pecho
+    ctx.fillStyle = C2;
+    ctx.fillRect(-hw * 0.55, -hh * 0.4, W * 0.35, H * 0.22);
+    ctx.fillRect( hw * 0.05, -hh * 0.4, W * 0.35, H * 0.22);
+
+    // Línea central del torso
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-3, -hh * 0.55, 6, H * 0.55);
+
+    // --- BRAZO DERECHO (punch_r) ---
+    ctx.fillStyle = C;
+    const armRExtend = pr > 0 ? pr * 1.1 : (b.attackState === 'charge' ? 10 : Math.sin(b.limbAnim * 0.1) * 5);
+    ctx.fillRect(hw * 0.7, -hh * 0.45, W * 0.28 + armRExtend, H * 0.22);
+    // Puño derecho
+    ctx.fillStyle = C2;
+    ctx.fillRect(hw * 0.7 + W * 0.28 + armRExtend - 4, -hh * 0.48, W * 0.2, H * 0.26);
+
+    // --- BRAZO IZQUIERDO (punch_l) ---
+    ctx.fillStyle = C;
+    const armLExtend = pl > 0 ? pl * 1.1 : Math.sin(b.limbAnim * 0.1 + Math.PI) * 5;
+    ctx.fillRect(-hw * 0.7 - W * 0.28 - armLExtend, -hh * 0.45, W * 0.28 + armLExtend, H * 0.22);
+    // Puño izquierdo
+    ctx.fillStyle = C2;
+    ctx.fillRect(-hw * 0.7 - W * 0.28 - armLExtend - W * 0.16, -hh * 0.48, W * 0.2, H * 0.26);
+
+    // --- CABEZA ---
+    const headBob = b.attackState === 'charge' ? Math.sin(b.limbAnim * 0.4) * 3 : Math.sin(b.limbAnim * 0.07) * 2;
+    ctx.fillStyle = C;
+    ctx.fillRect(-hw * 0.6, -hh - H * 0.32 + headBob, W * 0.6, H * 0.32);
+
+    // Ojos (rojos en fase 2, brillantes)
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = b.phase === 2 ? '#ff0000' : '#fff';
+    ctx.fillStyle = b.phase === 2 ? '#ff0000' : '#00ffcc';
+    ctx.fillRect(-hw * 0.45, -hh - H * 0.26 + headBob, W * 0.12, H * 0.1);
+    ctx.fillRect(-hw * 0.1, -hh - H * 0.26 + headBob, W * 0.12, H * 0.1);
+    ctx.shadowBlur = 0;
+
+    // Boca / rejilla
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-hw * 0.45, -hh - H * 0.1 + headBob, W * 0.45, H * 0.05);
+
+    // Antena en la cabeza
+    ctx.fillStyle = C2;
+    ctx.fillRect(-hw * 0.1, -hh - H * 0.32 - 10 + headBob, 6, 12);
+    ctx.fillStyle = b.phase === 2 ? '#ff0000' : '#ffcc00';
+    ctx.fillRect(-hw * 0.1 - 2, -hh - H * 0.32 - 14 + headBob, 10, 8);
+
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+
+    // Barra de HP sobre el jefe
+    ctx.scale(b.facing, 1); // desescalar para que la barra quede derecha
+    const barW = b.w + 20;
+    const barX = -barW/2;
+    const barY2 = -hh - H * 0.32 - 30;
+    ctx.fillStyle = '#300';
+    ctx.fillRect(barX, barY2, barW, 10);
+    const hpPct = b.currentHp / b.maxHp;
+    ctx.fillStyle = hpPct > 0.5 ? '#00ff44' : hpPct > 0.25 ? '#ffaa00' : '#ff0000';
+    ctx.fillRect(barX, barY2, barW * hpPct, 10);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY2, barW, 10);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Bungee, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(b.name, 0, barY2 - 6);
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = '8px monospace';
+    const weakMap = { jump:'⬆SALTA ENCIMA', dash:'⚡DASH', stomp:'👟STOMP', speed:'💨+150KM/H' };
+    ctx.fillText('⚠ ' + (weakMap[b.weakness] || b.weakness), 0, barY2 - 16);
+
+    ctx.restore();
+}
+
+function drawBossArena() {
+    if (!bossArena || !bossActive) return;
+    ctx.save();
+    ctx.translate(-world.camX, -world.camY);
+
+    // Dibujar barreras laterales con efecto neón pulsante
+    if (bossArena.barriers) {
+        const pulse = 0.4 + Math.sin(Date.now() * 0.005) * 0.3;
+        for (let bar of bossArena.barriers) {
+            ctx.fillStyle = `rgba(255,0,128,${0.25 + pulse * 0.15})`;
+            ctx.strokeStyle = '#ff0080';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 20 + pulse * 10;
+            ctx.shadowColor = '#ff0080';
+            ctx.fillRect(bar.x, bar.y, bar.w, bar.h);
+            ctx.strokeRect(bar.x, bar.y, bar.w, bar.h);
+            // Texto ARENA en la barrera
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ff0080';
+            ctx.font = 'bold 10px Bungee';
+            ctx.textAlign = 'center';
+            ctx.save();
+            ctx.translate(bar.x + bar.w/2, bar.y + bar.h/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText('⚠ ARENA ⚠', 0, 0);
+            ctx.restore();
+        }
+        ctx.shadowBlur = 0;
+    }
+
+    ctx.restore();
+
+    // Barra de HP del jefe en la parte superior
+    if (activeBoss && !activeBoss.dead) {
+        const bW = 400;
+        const bX = canvas.width/2 - bW/2;
+        const bY = 10;
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(bX - 5, bY - 5, bW + 10, 30);
+        ctx.fillStyle = '#300';
+        ctx.fillRect(bX, bY, bW, 18);
+        const hpPct = activeBoss.currentHp / activeBoss.maxHp;
+        const hpC = hpPct > 0.5 ? '#00ff44' : hpPct > 0.25 ? '#ffaa00' : '#ff0000';
+        ctx.fillStyle = hpC;
+        ctx.fillRect(bX, bY, bW * hpPct, 18);
+        ctx.strokeStyle = '#ff0080';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bX, bY, bW, 18);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px Bungee';
+        ctx.textAlign = 'center';
+        ctx.fillText(activeBoss.emoji + ' ' + activeBoss.name + ' ' + Math.ceil(activeBoss.currentHp) + '/' + activeBoss.maxHp, canvas.width/2, bY + 13);
+    }
+}
+
+function drawAnimalCompanion() {
+    const a = getActiveAnimalData();
+    if (a.id === 'dog') return; // Dog has its own draw function
+    if (!dog.unlocked && a.id !== 'dog') return;
+    ctx.save();
+    ctx.translate(dog.x + dog.w/2, dog.y + dog.h/2);
+    ctx.scale(dog.facing, 1);
+
+    const col = a.color || '#888';
+    const W = dog.w, H = dog.h;
+    const hw = W/2, hh = H/2;
+    const walk = Math.sin(dog.animFrame * 0.2) * 4;
+    const attack = dog.state === 'attack';
+
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = col;
+
+    if (a.id === 'eagle' || a.id === 'falcon') {
+        // Ave: alas + cuerpo
+        const wing = Math.sin(dog.animFrame * 0.3) * 8;
+        ctx.fillStyle = col;
+        ctx.fillRect(-hw - 15, -hh + wing, 15, H*0.4);
+        ctx.fillRect(hw,       -hh - wing, 15, H*0.4);
+        ctx.fillRect(-hw*0.7, -hh*0.5, W*0.7, H*0.7);
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillRect(hw*0.3, -hh*0.2, W*0.25, H*0.18); // pico
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-hw*0.4, -hh*0.3, W*0.15, H*0.12);
+    } else if (a.id === 'shark' || a.id === 'whale' || a.id === 'croc' || a.id === 'octopus') {
+        // Acuáticos: cuerpo alargado + aleta
+        const hover = Math.sin(dog.animFrame * 0.12) * 3;
+        ctx.fillStyle = col;
+        ctx.fillRect(-hw, -hh * 0.6 + hover, W * 1.1, H * 0.55);
+        // Aleta dorsal
+        ctx.fillRect(-hw * 0.1, -hh - H*0.25 + hover, W*0.2, H*0.28);
+        // Cola
+        ctx.fillRect(-hw - W*0.3, -hh*0.3 + hover, W*0.3, H*0.25);
+        ctx.fillRect(-hw - W*0.3, hh*0.1 + hover, W*0.3, H*0.22);
+        // Ojo
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(hw*0.4, -hh*0.3 + hover, W*0.15, H*0.13);
+    } else if (a.id === 'lion' || a.id === 'tiger' || a.id === 'panther' || a.id === 'cheetah') {
+        // Felino: cuerpo bajo + cabeza grande
+        ctx.fillStyle = col;
+        // Patas
+        ctx.fillRect(-hw*0.5, hh*0.1 + walk*0.5, W*0.28, H*0.4);
+        ctx.fillRect(hw*0.2, hh*0.1 - walk*0.5, W*0.28, H*0.4);
+        ctx.fillRect(-hw, -hh*0.2 - walk*0.3, W*0.26, H*0.35);
+        ctx.fillRect(hw*0.6, -hh*0.2 + walk*0.3, W*0.26, H*0.35);
+        // Cuerpo
+        ctx.fillRect(-hw, -hh*0.6, W * 1.1, H*0.7);
+        // Cabeza
+        ctx.fillRect(hw*0.4, -hh - H*0.22, W*0.65, H*0.42);
+        // Melena/rasgos
+        ctx.fillStyle = a.id === 'lion' ? '#b8860b' : col;
+        ctx.fillRect(hw*0.3, -hh - H*0.28, W*0.8, H*0.55);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(hw*0.6, -hh - H*0.12, W*0.18, H*0.13);
+        // Dientes si ataca
+        if (attack) {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(hw*0.8, -hh + H*0.05, W*0.1, H*0.1);
+        }
+    } else if (a.id === 'gorilla' || a.id === 'bear' || a.id === 'elephant' || a.id === 'rhino' || a.id === 'bull') {
+        // Pesado: grande y robusto
+        ctx.fillStyle = col;
+        // Piernas
+        ctx.fillRect(-hw*0.45, hh*0.15 + walk*0.3, W*0.33, H*0.38);
+        ctx.fillRect(hw*0.15, hh*0.15 - walk*0.3, W*0.33, H*0.38);
+        // Cuerpo grande
+        ctx.fillRect(-hw, -hh*0.65, W, H*0.8);
+        // Brazos
+        ctx.fillRect(-hw - W*0.25, -hh*0.4 + walk*0.2, W*0.28, H*0.45);
+        ctx.fillRect(hw, -hh*0.4 - walk*0.2, W*0.28, H*0.45);
+        // Cabeza
+        ctx.fillStyle = col;
+        ctx.fillRect(-hw*0.6, -hh - H*0.3, W*0.65, H*0.35);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-hw*0.4, -hh - H*0.2, W*0.15, H*0.12);
+        if (a.id === 'elephant') { // Trompa
+            ctx.fillStyle = col;
+            ctx.fillRect(hw*0.05, -hh - H*0.1, W*0.15, H*0.3);
+        }
+        if (a.id === 'rhino' || a.id === 'bull') { // Cuerno
+            ctx.fillStyle = '#888';
+            ctx.fillRect(hw*0.2, -hh - H*0.35, W*0.1, H*0.15);
+        }
+    } else {
+        // Animal genérico con cubos
+        ctx.fillStyle = col;
+        ctx.fillRect(-hw*0.4, hh*0.1 + walk*0.5, W*0.25, H*0.4);
+        ctx.fillRect(hw*0.15, hh*0.1 - walk*0.5, W*0.25, H*0.4);
+        ctx.fillRect(-hw*0.6, -hh*0.5, W*0.6, H*0.6);
+        ctx.fillRect(-hw - W*0.2, -hh*0.3 + walk*0.3, W*0.22, H*0.3);
+        ctx.fillRect(hw, -hh*0.3 - walk*0.3, W*0.22, H*0.3);
+        ctx.fillRect(-hw*0.5, -hh - H*0.28, W*0.52, H*0.3);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-hw*0.35, -hh - H*0.18, W*0.13, H*0.1);
+        ctx.fillRect(hw*0.0,   -hh - H*0.18, W*0.13, H*0.1);
+    }
+
+    if (attack) {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.5 + Math.sin(dog.animFrame * 0.4) * 0.3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 30, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+
+    ctx.shadowBlur = 0;
+    ctx.restore();
+}
+
+function openInventory() {
+    inventoryActive = true;
+    gameActive = false;
+    updateInventoryUI();
+    setInvTab('items');
+    document.getElementById('inventory-overlay').style.display = 'flex';
+}
+
+function setInvTab(tab) {
+    document.getElementById('inv-tab-items').style.display = tab === 'items' ? 'block' : 'none';
+    document.getElementById('inv-tab-animals').style.display = tab === 'animals' ? 'block' : 'none';
+    document.getElementById('tab-items').style.background = tab === 'items' ? '#ff0080' : 'transparent';
+    document.getElementById('tab-animals').style.background = tab === 'animals' ? '#ffcc00' : 'transparent';
+    document.getElementById('tab-animals').style.color = tab === 'animals' ? '#000' : '#ffcc00';
+    if (tab === 'animals') buildAnimalGrid();
+}
+
+function buildAnimalGrid() {
+    const grid = document.getElementById('animal-grid');
+    const biome = getCurrentBiome();
+    grid.innerHTML = '';
+    document.getElementById('active-animal-name').textContent = getActiveAnimalData().name + ' ' + getActiveAnimalData().emoji;
+    document.getElementById('current-biome-name').textContent = biome.name;
+    for (const a of ANIMALS) {
+        const owned = unlockedAnimals.includes(a.id);
+        const isActive = activeAnimal === a.id;
+        const isBonus = (a.biomeBonus === 'all' || a.biomeBonus === biome.id);
+        const div = document.createElement('div');
+        div.style.cssText = `background:${isActive ? 'rgba(0,255,204,0.2)' : owned ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.3)'};border:2px solid ${isActive ? '#00ffcc' : owned ? '#888' : '#444'};border-radius:8px;padding:10px;cursor:${owned ? 'pointer' : 'default'};text-align:center;`;
+        div.innerHTML = `<div style="font-size:24px;">${a.emoji}${isBonus ? '⭐' : ''}</div>
+            <div style="font-size:11px;color:${isActive ? '#00ffcc' : '#fff'};margin:3px 0;">${a.name}</div>
+            <div style="font-size:10px;color:#888;">${a.desc}</div>
+            ${!owned ? `<div style="font-size:11px;color:#ffcc00;margin-top:3px;">💰${a.cost}</div>` : ''}
+            ${isActive ? '<div style="font-size:10px;color:#00ffcc;">✓ ACTIVO</div>' : ''}`;
+        if (owned) {
+            div.onclick = () => { activeAnimal = a.id; buildAnimalGrid(); showStylish(a.emoji + ' ' + a.name + ' SELECCIONADO!', a.color); };
+        } else {
+            div.onclick = () => {
+                if (coins >= a.cost) {
+                    coins -= a.cost;
+                    unlockedAnimals.push(a.id);
+                    activeAnimal = a.id;
+                    coinsDisplay.innerText = `💰 ${coins}`;
+                    showStylish('¡' + a.emoji + ' DESBLOQUEADO!', a.color);
+                    playSound('coin');
+                    buildAnimalGrid();
+                } else {
+                    showStylish('SIN MONEDAS! 💸', '#ff0080');
+                }
+            };
+        }
+        grid.appendChild(div);
+    }
+}
+
+function closeInventory() {
+    inventoryActive = false;
+    document.getElementById('inventory-overlay').style.display = 'none';
+    gameActive = true;
+}
+
+function updateInventoryUI() {
+    document.getElementById('inv-meat-count').textContent = 'x' + meatInventory;
+    
+    const jetpackLvl = upgrades.jetpack.level;
+    const jStatus = document.getElementById('inv-jetpack-status');
+    const jBtn = document.getElementById('inv-jetpack-btn');
+    if (jetpackLvl > 0) {
+        jStatus.textContent = jetpackEnabled ? '✅ ACTIVO' : '❌ DESACTIVADO';
+        jBtn.textContent = jetpackEnabled ? 'DESACTIVAR' : 'ACTIVAR';
+    } else {
+        jStatus.textContent = 'No desbloqueado';
+        jBtn.textContent = 'BLOQUEADO';
+    }
+
+    const rStatus = document.getElementById('inv-rocket-status');
+    const rBtn = document.getElementById('inv-rocket-btn');
+    if (rocketUnlocked) {
+        rStatus.textContent = rocketEnabled ? '✅ ACTIVO' : '❌ DESACTIVADO';
+        rBtn.textContent = rocketEnabled ? 'DESACTIVAR' : 'ACTIVAR';
+    } else {
+        rStatus.textContent = 'No desbloqueado';
+        rBtn.textContent = 'BLOQUEADO';
+    }
+
+    const fuelPct = Math.floor(jetpackFuel);
+    document.getElementById('inv-fuel-bar-text').textContent = fuelPct + '%';
+    document.getElementById('inv-fuel-bar').style.width = fuelPct + '%';
+}
+
+function toggleItem(item) {
+    if (item === 'jetpack') {
+        if (upgrades.jetpack.level > 0) {
+            jetpackEnabled = !jetpackEnabled;
+            showStylish(jetpackEnabled ? 'JETPACK ON!' : 'JETPACK OFF', '#ffaa00');
+        }
+    } else if (item === 'rocket') {
+        if (rocketUnlocked) {
+            rocketEnabled = !rocketEnabled;
+            showStylish(rocketEnabled ? 'COHETE ON!' : 'COHETE OFF', '#ff0080');
+        }
+    }
+    updateInventoryUI();
+}
+
+function feedDog() {
+    if (meatInventory <= 0) {
+        showStylish('SIN CARNE!', '#ff4400');
+        return;
+    }
+    if (!dog.unlocked) {
+        showStylish('PRIMERO COMPRA EL PERRO!', '#ff4400');
+        return;
+    }
+    meatInventory--;
+    dogHunger = Math.min(100, dogHunger + 50);
+    showStylish('PERRO ALIMENTADO! 🥩', '#ff8800');
+    playSound('coin');
+    spawnParticles(dog.x, dog.y, '#ff8800', 10, 4);
+    updateInventoryUI();
+    document.getElementById('inv-meat-count').textContent = 'x' + meatInventory;
+}
+function openShop() {
+    if (shopActive) return;
+    shopActive = true;
+    gameActive = false;
+    document.getElementById('shop-coins').textContent = coins;
+    
+    document.getElementById('interact-hint').style.display = 'none';
+    updateShopUI();
+    shopOverlay.classList.add('active');
+}
+
+function closeShop() {
+    shopActive = false;
+    shopOverlay.classList.remove('active');
+    gameActive = true;
+}
+
+function updateShopUI() {
+    for (let key in upgrades) {
+        const upg = upgrades[key];
+        const levelEl = document.getElementById(key + '-level');
+        const costEl = document.getElementById(key + '-cost');
+        const itemEl = document.getElementById('shop-' + key);
+        if (!levelEl || !costEl || !itemEl) continue;
+
+        if (key === 'dog') {
+            if (dog.unlocked) {
+                levelEl.textContent = '✓ Activo';
+                costEl.textContent = 'Comprado';
+                itemEl.classList.add('disabled', 'bought');
+            } else {
+                levelEl.textContent = 'Comprar';
+                costEl.textContent = `💰 ${upg.cost}`;
+                itemEl.classList.toggle('disabled', coins < upg.cost);
+            }
+        } else if (key === 'heal') {
+            levelEl.textContent = 'Guardar aquí';
+            costEl.textContent = `💰 ${upg.cost}`;
+            itemEl.classList.toggle('disabled', coins < upg.cost);
+        } else if (key === 'meat') {
+            levelEl.textContent = `x${meatInventory} en inv.`;
+            costEl.textContent = `💰 ${upg.cost}`;
+            itemEl.classList.toggle('disabled', coins < upg.cost);
+        } else if (key === 'magnet') {
+            if (magnetUnlocked) {
+                levelEl.textContent = '✓ Desbloqueado';
+                costEl.textContent = 'Comprado';
+                itemEl.classList.add('disabled', 'bought');
+            } else {
+                levelEl.textContent = 'Comprar';
+                costEl.textContent = `💰 ${upg.cost}`;
+                itemEl.classList.toggle('disabled', coins < upg.cost);
+            }
+        } else if (key === 'rocket') {
+            if (rocketUnlocked) {
+                levelEl.textContent = '✓ Desbloqueado';
+                costEl.textContent = 'Comprado';
+                itemEl.classList.add('disabled', 'bought');
+            } else {
+                levelEl.textContent = 'Comprar';
+                costEl.textContent = `💰 ${upg.cost}`;
+                itemEl.classList.toggle('disabled', coins < upg.cost);
+            }
+        } else if (key === 'fuel') {
+            levelEl.textContent = `⛽ ${Math.floor(jetpackFuel)}%`;
+            costEl.textContent = `💰 ${upg.cost}`;
+            itemEl.classList.toggle('disabled', coins < upg.cost || jetpackFuel >= 100);
+        } else if (upg.level >= upg.maxLevel) {
+            levelEl.textContent = 'MAX Nv.' + upg.maxLevel;
+            costEl.textContent = '✓ MÁXIMO';
+            itemEl.classList.add('disabled', 'bought');
+        } else {
+            levelEl.textContent = `Nivel ${upg.level}/${upg.maxLevel}`;
+            costEl.textContent = `💰 ${upg.cost}`;
+            itemEl.classList.toggle('disabled', coins < upg.cost);
+        }
+    }
+}
+
+function buyUpgrade(type) {
+    const upg = upgrades[type];
+
+    if (type === 'dog') {
+        if (dog.unlocked || coins < upg.cost) return;
+        coins -= upg.cost;
+        dog.unlocked = true;
+        dog.x = player.x - 60;
+        dog.y = player.y;
+        showStylish('PERRO DESBLOQUEADO!', '#ff0080');
+        playSound('coin');
+        updateShopUI();
+        document.getElementById('shop-coins').textContent = coins;
+        coinsDisplay.innerText = `💰 ${coins}`;
+        return;
+    }
+
+    if (type === 'heal') {
+        if (coins < upg.cost) return;
+        coins -= upg.cost;
+        lastCheckpoint = {x: player.x, y: player.y};
+        showStylish('CHECKPOINT GUARDADO!', '#00ffcc');
+        playSound('checkpoint');
+        spawnParticles(player.x, player.y, '#00ffcc', 20, 5);
+        updateShopUI();
+        document.getElementById('shop-coins').textContent = coins;
+        coinsDisplay.innerText = `💰 ${coins}`;
+        return;
+    }
+
+    if (type === 'meat') {
+        if (coins < upg.cost) return;
+        coins -= upg.cost;
+        meatInventory++;
+        showStylish('🥩 CARNE AÑADIDA AL INVENTARIO!', '#ff8800');
+        playSound('coin');
+        updateShopUI();
+        document.getElementById('shop-coins').textContent = coins;
+        coinsDisplay.innerText = `💰 ${coins}`;
+        return;
+    }
+
+    if (type === 'magnet') {
+        if (magnetUnlocked || coins < upg.cost) return;
+        coins -= upg.cost;
+        magnetUnlocked = true;
+        magnetActive = true;
+        showStylish('🧲 IMAN DESBLOQUEADO!', '#ffaa00');
+        playSound('coin');
+        updateShopUI();
+        document.getElementById('shop-coins').textContent = coins;
+        coinsDisplay.innerText = `💰 ${coins}`;
+        return;
+    }
+
+    if (type === 'rocket') {
+        if (rocketUnlocked || coins < upg.cost) return;
+        coins -= upg.cost;
+        rocketUnlocked = true;
+        rocketEnabled = true;
+        rocketFuel = jetpackFuel; // shares fuel with jetpack
+        showStylish('🚀 COHETE DESBLOQUEADO!', '#ff0080');
+        playSound('coin');
+        updateShopUI();
+        document.getElementById('shop-coins').textContent = coins;
+        coinsDisplay.innerText = `💰 ${coins}`;
+        return;
+    }
+
+    if (type === 'fuel') {
+        if (coins < upg.cost || jetpackFuel >= 100) return;
+        coins -= upg.cost;
+        jetpackFuel = Math.min(100, jetpackFuel + 40);
+        showStylish('⛽ GASOLINA RECARGADA!', '#ffaa00');
+        playSound('coin');
+        updateShopUI();
+        document.getElementById('shop-coins').textContent = coins;
+        coinsDisplay.innerText = `💰 ${coins}`;
+        return;
+    }
+
+    if (upg.level >= upg.maxLevel || coins < upg.cost) return;
+
+    coins -= upg.cost;
+    upg.level++;
+    upg.cost = Math.floor(upg.baseCost * Math.pow(1.5, upg.level));
+
+    applyUpgradeEffects(type);
+
+    updateShopUI();
+    document.getElementById('shop-coins').textContent = coins;
+    coinsDisplay.innerText = `💰 ${coins}`;
+    playSound('coin');
+}
+
+function applyUpgradeEffects(type) {
+    switch(type) {
+        case 'dash': break;
+        case 'speed': break;
+        case 'jump': break;
+        case 'jetpack': jetpackFuel = 100; break;
+    }
+}
+
+// ========== EL PERRO GUARDIAN ==========
+function updateDog() {
+    if (!dog.unlocked) return;
+
+    dog.animFrame++;
+
+    let nearestEnemy = null;
+    let nearestDist = 250; 
+
+    // Dog can't attack when starving (hunger = 0)
+    if (dogHunger > 0) {
+    for (let e of world.enemies) {
+        if (e.dead) continue;
+        const dist = Math.hypot(e.x - dog.x, e.y - dog.y);
+        if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestEnemy = e;
+        }
+    }
+    }
+
+    if (nearestEnemy && dog.cooldown <= 0) {
+        dog.state = 'attack';
+        dog.targetEnemy = nearestEnemy;
+
+        const dx = nearestEnemy.x - dog.x;
+        const dy = nearestEnemy.y - dog.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist > 5) {
+            dog.vx = (dx / dist) * 8;
+            dog.vy = (dy / dist) * 8;
+        }
+
+        dog.facing = dx > 0 ? 1 : -1;
+
+        if (dist < 40) {
+            const dmg = Math.max(1, Math.floor(getAnimalMultiplier('attack')));
+            nearestEnemy.hp = (nearestEnemy.hp || 1) - dmg;
+            if (nearestEnemy.hp <= 0) {
+                nearestEnemy.dead = true;
+                coins += nearestEnemy.reward || 10;
+            }
+            spawnParticles(nearestEnemy.x + nearestEnemy.w/2, nearestEnemy.y + nearestEnemy.h/2, '#ff4400', 20, 8);
+            spawnParticles(dog.x, dog.y, '#8B4513', 10, 5);
+            const animalData = getActiveAnimalData();
+            showStylish(animalData.emoji + ' ATACA!', animalData.color || '#ff0080');
+            playSound('kill');
+            coins += 10; 
+            dog.cooldown = 60; 
+            dog.state = 'eat';
+        }
+    } else {
+        dog.state = 'follow';
+        dog.targetEnemy = null;
+
+        const targetX = player.x - 60;
+        const targetY = player.y + 10;
+        const dx = targetX - dog.x;
+        const dy = targetY - dog.y;
+
+        dog.vx = dx * 0.1;
+        dog.vy = dy * 0.1;
+
+        if (Math.abs(dx) > 5) {
+            dog.facing = dx > 0 ? 1 : -1;
+        }
+    }
+
+    if (dog.cooldown > 0) dog.cooldown--;
+
+    dog.x += dog.vx;
+    dog.y += dog.vy;
+
+    if (dog.y < player.y + 50) {
+        dog.vy += 0.5;
+    }
+
+    const maxDogSpeed = 10;
+    const speed = Math.hypot(dog.vx, dog.vy);
+    if (speed > maxDogSpeed) {
+        dog.vx = (dog.vx / speed) * maxDogSpeed;
+        dog.vy = (dog.vy / speed) * maxDogSpeed;
+    }
+}
+
+function drawDog() {
+    if (!dog.unlocked) return;
+
+    ctx.save();
+    ctx.translate(dog.x + dog.w/2, dog.y + dog.h/2);
+    ctx.scale(dog.facing, 1);
+
+    const chewOffset = (dog.state === 'eat' && Math.floor(dog.animFrame / 3) % 2 === 0) ? 3 : 0;
+
+    // Cuerpo
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(-dog.w/2, -dog.h/2, dog.w, dog.h);
+
+    // Cabeza
+    ctx.fillStyle = '#A0522D';
+    ctx.fillRect(-dog.w/2 + 20, -dog.h/2 - 15 + chewOffset, 25, 20);
+
+    // Orejas
+    ctx.fillStyle = '#654321';
+    ctx.fillRect(-dog.w/2 + 18, -dog.h/2 - 22 + chewOffset, 8, 10);
+    ctx.fillRect(-dog.w/2 + 32, -dog.h/2 - 22 + chewOffset, 8, 10);
+
+    // Ojos
+    ctx.fillStyle = dog.state === 'attack' ? '#ff0000' : '#00ff00';
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = dog.state === 'attack' ? '#ff0000' : '#00ff00';
+    ctx.fillRect(-dog.w/2 + 28, -dog.h/2 - 10 + chewOffset, 6, 6);
+    ctx.fillRect(-dog.w/2 + 38, -dog.h/2 - 10 + chewOffset, 6, 6);
+    ctx.shadowBlur = 0;
+
+    // Pupilas
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-dog.w/2 + 30, -dog.h/2 - 8 + chewOffset, 2, 2);
+    ctx.fillRect(-dog.w/2 + 40, -dog.h/2 - 8 + chewOffset, 2, 2);
+
+    // Hocico
+    ctx.fillStyle = '#333';
+    ctx.fillRect(-dog.w/2 + 25, -dog.h/2 + 2 + chewOffset, 15, 8);
+
+    // Dientes
+    if (dog.state === 'attack' || dog.state === 'eat') {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-dog.w/2 + 28, -dog.h/2 + 8 + chewOffset, 4, 4);
+        ctx.fillRect(-dog.w/2 + 35, -dog.h/2 + 8 + chewOffset, 4, 4);
+    }
+
+    // Cola
+    const tailWag = Math.sin(dog.animFrame * 0.3) * 5;
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-dog.w/2 - 5, 0);
+    ctx.lineTo(-dog.w/2 - 15, -5 + tailWag);
+    ctx.stroke();
+
+    // Collar
+    ctx.fillStyle = '#ff0080';
+    ctx.fillRect(-dog.w/2 + 15, -dog.h/2 + 8, 10, 4);
+
+    // Patas
+    ctx.fillStyle = '#654321';
+    const legAnim = Math.sin(dog.animFrame * 0.2) * 3;
+    ctx.fillRect(-dog.w/2 + 5 + legAnim, dog.h/2, 8, 10);
+    ctx.fillRect(-dog.w/2 + 22 - legAnim, dog.h/2, 8, 10);
+
+    // Aura ataque
+    if (dog.state === 'attack') {
+        ctx.strokeStyle = '#ff0080';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.5 + Math.sin(dog.animFrame * 0.5) * 0.3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 30 + Math.sin(dog.animFrame * 0.3) * 5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+}
+
+// ========== VELOCIMETRO SUPERIOR DERECHA ==========
+function drawSpeedometerTop() {
+    const c = speedoTopCtx;
+    const W = 100, H = 100, cx = 50, cy = 55, R = 38;
+    c.clearRect(0, 0, W, H);
+
+    const kmh = Math.min(200, Math.max(0, player.displaySpeed || 0));
+    const speedPct = kmh / 200;
+
+    c.fillStyle = 'rgba(0,0,0,0.5)';
+    c.beginPath();
+    c.arc(cx, cy, R + 8, 0, Math.PI * 2);
+    c.fill();
+
+    const startAngle = (Math.PI / 180) * 150;
+    const totalAngle = (Math.PI / 180) * 240;
+
+    if (speedPct > 0) {
+        const grad = c.createLinearGradient(cx - R, cy, cx + R, cy);
+        grad.addColorStop(0, '#00ffcc');
+        grad.addColorStop(0.5, '#ffaa00');
+        grad.addColorStop(1, '#ff0080');
+        c.beginPath();
+        c.arc(cx, cy, R, startAngle, startAngle + totalAngle * speedPct);
+        c.strokeStyle = grad;
+        c.lineWidth = 8;
+        c.lineCap = 'round';
+        c.stroke();
+    }
+
+    const needleAngle = startAngle + totalAngle * speedPct;
+    const nx = cx + Math.cos(needleAngle) * (R - 4);
+    const ny = cy + Math.sin(needleAngle) * (R - 4);
+    c.beginPath();
+    c.moveTo(cx, cy);
+    c.lineTo(nx, ny);
+    c.strokeStyle = '#fff';
+    c.lineWidth = 2;
+    c.stroke();
+
+    c.beginPath();
+    c.arc(cx, cy, 4, 0, Math.PI * 2);
+    c.fillStyle = '#fff';
+    c.fill();
+
+    c.fillStyle = kmh > 150 ? '#ff0080' : kmh > 80 ? '#ffaa00' : '#00ffcc';
+    c.font = 'bold 16px Bungee, monospace';
+    c.textAlign = 'center';
+    c.fillText(Math.floor(kmh), cx, cy + 15);
+
+    c.fillStyle = '#888';
+    c.font = '8px monospace';
+    c.fillText('KM/H', cx, cy + 25);
+}
+
+// ========== CONTROLES DEL JETPACK ==========
+let jetpackActive = false;
+let jetpackFuel = 100;
+const fuelDisplay = document.getElementById('jetpack-fuel-display');
+const fuelText = document.getElementById('fuel-text');
+
+function handleJetpack() {
+    if (upgrades.jetpack.level > 0) {
+        if (fuelDisplay) fuelDisplay.style.display = 'block';
+        if (fuelText) fuelText.textContent = Math.floor(jetpackFuel) + '%';
+    } else {
+        if (fuelDisplay) fuelDisplay.style.display = 'none';
+    }
+
+    if (upgrades.jetpack.level > 0 && keys['KeyW'] && !player.grounded && jetpackEnabled) {
+        if (jetpackFuel > 0) {
+            jetpackActive = true;
+            const jetpackPower = 0.5 + (upgrades.jetpack.level * 0.3);
+            player.dy -= jetpackPower;
+
+            const maxJetpackSpeed = -6 - (upgrades.jetpack.level * 2);
+            if (player.dy < maxJetpackSpeed) {
+                player.dy = maxJetpackSpeed;
+            }
+
+            jetpackFuel -= 0.5;
+
+            if (frameCount % 2 === 0) {
+                spawnParticles(player.x + player.w/2, player.y + player.h, '#ff4400', 2, 3);
+                spawnParticles(player.x + player.w/2, player.y + player.h, '#ffaa00', 2, 2);
+            }
+        }
+    } else {
+        jetpackActive = false;
+    }
+
+    if (player.grounded && jetpackFuel < 100) {
+        jetpackFuel += 2;
+        if (jetpackFuel > 100) jetpackFuel = 100;
+    }
+}
+
+function addBlock(x, y, w, h) { world.blocks.push({x, y, w, h}); }
+function addSpike(x, y, w) {
+    let valid = true;
+    for (let b of world.blocks) {
+        if (x >= b.x && x + w <= b.x + b.w && y >= b.y && y + 40 <= b.y + b.h) {
+            valid = false;
+            break;
+        }
+    }
+    if (valid) world.spikes.push({x, y, w});
+}
+function addCoin(x, y) { world.coins.push({x, y, collected: false, anim: 0}); }
+function addEnemy(x, y, type = null) {
+    // Pick enemy type based on biome if not specified
+    if (!type) {
+        const biomeTypes = ['robot','mech','spike_mob','golem','electric','tank','ninja','brute','hazmat','slime','bomber','jumper','speeder','drone','copter'];
+        const biome = getCurrentBiome();
+        const biomeMap = {
+            factory: ['robot','mech','electric','golem','tank','spike_mob'],
+            savanna: ['heavyweight','soldier','biker','runner','speeder','giant'],
+            ocean:   ['surfer','hover_bot','colossus','slime','crab_mech','jetpack_e'],
+            city:    ['ninja','brute','berserker','hazmat','sniper','armored'],
+            jungle:  ['spider_bot','toxic_runner','wasp_bot','digger','flamethrower','biker'],
+            desert:  ['soldier','biker','digger','turbo_racer','runner','cryo'],
+            sky:     ['drone','copter','wasp_bot','jetpack_e','hover_bot','electric']
+        };
+        const pool = biomeMap[biome.id] || biomeTypes;
+        type = pool[Math.floor(Math.random() * pool.length)];
+    }
+    // Find type data, fallback to goomba
+    const tData = ENEMY_TYPES.find(t => t.id === type) || ENEMY_TYPES[0];
+    world.enemies.push({
+        x, y,
+        w: tData.w, h: tData.h,
+        type: tData.id,
+        emoji: tData.emoji,
+        dx: tData.speed, dy: 0,
+        facing: 1, dead: false, grounded: false,
+        hp: tData.hp, maxHp: tData.hp,
+        reward: tData.reward,
+        flies: tData.flies || false,
+        explodes: tData.explodes || false,
+        splits: tData.splits || false,
+        color: tData.color,
+        flyAngle: Math.random() * Math.PI * 2
+    });
+}
+function addCheckpoint(x, y) {
+    // Plataforma plana de apoyo para que el jugador no se caiga
+    world.blocks.push({ x: x - 60, y: y, w: 180, h: 20, neon: '#00ffcc', isCheckpointPlatform: true });
+    world.checkpoints.push({ x: x + 30, y: y - 80, active: false });
+}
+
+function createArchitecturalChunk() {
+    let isShopZone = (score > 0 && (score + 1) % 10 === 0);
+    let type = Math.floor(Math.random() * 70);
+    let startX = world.lastChunkX;
+    let startY = world.lastChunkY;
+    let endX = startX;
+    let endY = startY;
+    const neons = ['#00ffcc', '#ff0080', '#b000ff', '#ffaa00', '#00ff00', '#ff4400'];
+    let chunkNeon = neons[Math.floor(Math.random() * neons.length)];
+    let safeStart = startX + 100;
+
+    if (isShopZone) {
+        addBlock(safeStart, startY, 1200, 40);
+        world.shopRobots.push({x: safeStart + 600, y: startY - 50, w: 40, h: 50, anim: 0});
+        addCoin(safeStart + 300, startY - 50);
+        addCoin(safeStart + 900, startY - 50);
+
+        endX = safeStart + 1200;
+        endY = startY;
+
+        world.chunkCount++;
+        // Plataforma plana de tienda: NO genera checkpoint ni enemigo extra
+        world.lastChunkX = endX;
+        world.lastChunkY = endY;
+        world.minY = Math.min(world.minY, endY);
+        world.maxY = Math.max(world.maxY, endY);
+        if (world.buildings.length < 50) {
+            for (let i = 0; i < 3; i++) {
+                world.buildings.push({
+                    x: endX + Math.random() * 600,
+                    w: 50 + Math.random() * 150,
+                    h: 200 + Math.random() * 500,
+                    color: `rgba(15,15,35,0.8)`
+                });
+            }
+        }
+        return;
+    }
+        switch(type) {
+            case 0:
+                addBlock(safeStart, startY, 500, 400);
+                addSpike(safeStart + 200, startY - 40, 40);
+                endX = safeStart + 500;
+                addCoin(safeStart + 350, startY - 80);
+                break;
+            case 1:
+                addBlock(safeStart, startY, 150, 400);
+                addBlock(safeStart + 250, startY - 80, 100, 20);
+                addBlock(safeStart + 450, startY - 160, 200, 400);
+                addCoin(safeStart + 290, startY - 120);
+                endX = safeStart + 650;
+                endY = startY - 160;
+                break;
+            case 2:
+                addBlock(safeStart, startY, 300, 400);
+                addBlock(safeStart + 300, startY - 300, 40, 600);
+                addCoin(safeStart + 340, startY - 150);
+                endX = safeStart + 340;
+                endY = startY - 300;
+                break;
+            case 3:
+                addBlock(safeStart, startY, 200, 400);
+                addBlock(safeStart + 250, startY + 50, 100, 20);
+                addBlock(safeStart + 400, startY + 100, 300, 400);
+                addCoin(safeStart + 280, startY + 10);
+                endX = safeStart + 700;
+                endY = startY + 100;
+                break;
+            case 4:
+                addBlock(safeStart, startY, 400, 400);
+                addBlock(safeStart + 100, startY - 150, 200, 20);
+                addCoin(safeStart + 180, startY - 200);
+                endX = safeStart + 400;
+                break;
+            case 5:
+                addBlock(safeStart, startY, 100, 400);
+                addBlock(safeStart + 200, startY - 100, 80, 20);
+                addBlock(safeStart + 380, startY - 200, 80, 20);
+                addBlock(safeStart + 560, startY - 300, 120, 400);
+                addCoin(safeStart + 220, startY - 150);
+                addCoin(safeStart + 400, startY - 250);
+                endX = safeStart + 680;
+                endY = startY - 300;
+                break;
+            case 6:
+                addBlock(safeStart, startY, 500, 400);
+                addSpike(safeStart + 150, startY - 40, 60);
+                addBlock(safeStart + 280, startY - 120, 60, 20);
+                addCoin(safeStart + 300, startY - 160);
+                addEnemy(safeStart + 350, startY - 50);
+                endX = safeStart + 500;
+                break;
+            case 7:
+                addBlock(safeStart, startY, 100, 400);
+                addBlock(safeStart, startY - 250, 100, 100);
+                addBlock(safeStart + 200, startY - 120, 300, 400);
+                addCoin(safeStart + 320, startY - 180);
+                endX = safeStart + 500;
+                endY = startY - 120;
+                break;
+            case 8:
+                addBlock(safeStart, startY, 350, 40);
+                addBlock(safeStart + 450, startY, 350, 40);
+                addSpike(safeStart + 150, startY - 40, 40);
+                addCoin(safeStart + 350, startY - 80);
+                endX = safeStart + 800;
+                break;
+            case 9:
+                addBlock(safeStart, startY, 200, 600);
+                addBlock(safeStart + 200, startY + 150, 200, 450);
+                addBlock(safeStart + 400, startY + 300, 200, 300);
+                addCoin(safeStart + 280, startY + 100);
+                addCoin(safeStart + 480, startY + 250);
+                endX = safeStart + 600;
+                endY = startY + 300;
+                break;
+            case 10:
+                addBlock(safeStart, startY, 80, 500);
+                addBlock(safeStart + 150, startY, 80, 500);
+                addBlock(safeStart + 300, startY, 80, 500);
+                addCoin(safeStart + 200, startY - 60);
+                addEnemy(safeStart + 380, startY - 30);
+                endX = safeStart + 380;
+                break;
+            case 11:
+                addBlock(safeStart, startY, 300, 400);
+                addBlock(safeStart + 100, startY - 400, 40, 300);
+                addBlock(safeStart + 350, startY - 100, 120, 20);
+                addCoin(safeStart + 390, startY - 150);
+                endX = safeStart + 470;
+                endY = startY - 100;
+                break;
+            case 12:
+                addBlock(safeStart, startY, 500, 400);
+                addBlock(safeStart + 150, startY + 80, 200, 20);
+                addCoin(safeStart + 220, startY + 40);
+                endX = safeStart + 500;
+                break;
+            case 13:
+                addBlock(safeStart, startY, 150, 400);
+                addBlock(safeStart + 220, startY - 150, 50, 20);
+                addBlock(safeStart + 340, startY - 300, 50, 20);
+                addBlock(safeStart + 460, startY - 450, 200, 600);
+                addCoin(safeStart + 230, startY - 200);
+                addCoin(safeStart + 350, startY - 350);
+                endX = safeStart + 660;
+                endY = startY - 450;
+                break;
+            case 14:
+                addBlock(safeStart, startY, 900, 50);
+                addSpike(safeStart + 100, startY - 40, 40);
+                addSpike(safeStart + 500, startY - 40, 40);
+                addSpike(safeStart + 800, startY - 40, 40);
+                addCoin(safeStart + 300, startY - 80);
+                addCoin(safeStart + 650, startY - 80);
+                endX = safeStart + 900;
+                break;
+            case 15:
+                addBlock(safeStart, startY, 120, 400);
+                addBlock(safeStart + 180, startY - 80, 120, 400);
+                addBlock(safeStart + 360, startY - 160, 120, 400);
+                addBlock(safeStart + 540, startY - 240, 120, 400);
+                addCoin(safeStart + 230, startY - 120);
+                addCoin(safeStart + 410, startY - 200);
+                addCoin(safeStart + 590, startY - 280);
+                endX = safeStart + 660;
+                endY = startY - 240;
+                break;
+            case 16:
+                addBlock(safeStart, startY, 300, 30);
+                addBlock(safeStart + 400, startY, 300, 30);
+                addSpike(safeStart + 150, startY - 40, 40);
+                addCoin(safeStart + 340, startY - 80);
+                addEnemy(safeStart + 450, startY - 30);
+                endX = safeStart + 700;
+                break;
+            case 17:
+                addBlock(safeStart, startY, 80, 200);
+                addBlock(safeStart + 150, startY - 180, 80, 200);
+                addBlock(safeStart, startY - 360, 80, 200);
+                addBlock(safeStart + 150, startY - 540, 80, 200);
+                addCoin(safeStart + 40, startY - 260);
+                addCoin(safeStart + 190, startY - 440);
+                endX = safeStart + 230;
+                endY = startY - 540;
+                break;
+            case 18:
+                addBlock(safeStart, startY, 600, 30);
+                addBlock(safeStart, startY - 200, 600, 30);
+                addBlock(safeStart, startY - 200, 30, 200);
+                addBlock(safeStart + 570, startY - 200, 30, 200);
+                addSpike(safeStart + 100, startY - 30, 40);
+                addSpike(safeStart + 300, startY - 30, 40);
+                addSpike(safeStart + 500, startY - 30, 40);
+                addCoin(safeStart + 200, startY - 100);
+                addCoin(safeStart + 400, startY - 100);
+                endX = safeStart + 600;
+                endY = startY - 170;
+                break;
+            case 19:
+                addBlock(safeStart, startY, 100, 20);
+                addBlock(safeStart + 180, startY - 80, 100, 20);
+                addBlock(safeStart + 360, startY - 160, 100, 20);
+                addBlock(safeStart + 540, startY - 80, 100, 20);
+                addBlock(safeStart + 720, startY, 100, 20);
+                addCoin(safeStart + 50, startY - 50);
+                addCoin(safeStart + 230, startY - 130);
+                addCoin(safeStart + 410, startY - 210);
+                addCoin(safeStart + 590, startY - 130);
+                endX = safeStart + 820;
+                break;
+            case 20:
+                addBlock(safeStart, startY, 800, 30);
+                addBlock(safeStart, startY - 150, 800, 30);
+                addCoin(safeStart + 200, startY - 90);
+                addCoin(safeStart + 500, startY - 90);
+                addEnemy(safeStart + 350, startY - 180);
+                endX = safeStart + 800;
+                endY = startY - 120;
+                break;
+            case 21:
+                addBlock(safeStart, startY, 500, 400);
+                addBlock(safeStart + 500, startY, 200, 80);
+                addCoin(safeStart + 250, startY - 60);
+                addEnemy(safeStart + 550, startY - 30);
+                endX = safeStart + 700;
+                break;
+            case 22:
+                addBlock(safeStart, startY, 200, 30);
+                addBlock(safeStart + 50, startY - 150, 200, 30);
+                addBlock(safeStart - 50, startY - 300, 200, 30);
+                addBlock(safeStart + 50, startY - 450, 200, 30);
+                addCoin(safeStart + 100, startY - 80);
+                addCoin(safeStart + 50, startY - 380);
+                endX = safeStart + 250;
+                endY = startY - 450;
+                break;
+            case 23:
+                addBlock(safeStart, startY, 80, 600);
+                addBlock(safeStart + 220, startY, 80, 600);
+                addBlock(safeStart + 100, startY - 100, 20, 20);
+                addBlock(safeStart + 180, startY - 250, 20, 20);
+                addBlock(safeStart + 100, startY - 400, 20, 20);
+                addCoin(safeStart + 140, startY - 200);
+                addCoin(safeStart + 140, startY - 500);
+                endX = safeStart + 300;
+                break;
+            case 24:
+                addBlock(safeStart, startY, 700, 400);
+                addBlock(safeStart + 100, startY + 100, 500, 250);
+                addCoin(safeStart + 350, startY + 50);
+                endX = safeStart + 700;
+                break;
+            case 25:
+                addBlock(safeStart, startY, 80, 20);
+                addBlock(safeStart + 180, startY - 60, 80, 20);
+                addBlock(safeStart + 360, startY - 120, 80, 20);
+                addBlock(safeStart + 540, startY - 180, 200, 400);
+                addCoin(safeStart + 40, startY - 50);
+                addCoin(safeStart + 220, startY - 110);
+                addCoin(safeStart + 400, startY - 170);
+                endX = safeStart + 740;
+                endY = startY - 180;
+                break;
+            case 26:
+                addBlock(safeStart, startY, 200, 400);
+                addBlock(safeStart + 200, startY + 250, 300, 100);
+                addBlock(safeStart + 500, startY, 200, 400);
+                addSpike(safeStart + 230, startY + 280, 40);
+                addSpike(safeStart + 430, startY + 280, 40);
+                addCoin(safeStart + 340, startY + 200);
+                endX = safeStart + 700;
+                break;
+            case 27:
+                addBlock(safeStart, startY - 450, 40, 550);
+                addBlock(safeStart + 100, startY - 200, 100, 20);
+                addBlock(safeStart + 100, startY - 350, 100, 20);
+                addBlock(safeStart + 100, startY - 500, 100, 20);
+                addCoin(safeStart + 140, startY - 280);
+                addCoin(safeStart + 140, startY - 430);
+                endX = safeStart + 200;
+                endY = startY - 500;
+                break;
+            case 28:
+                addBlock(safeStart, startY, 500, 30);
+                addBlock(safeStart, startY - 100, 400, 30);
+                addBlock(safeStart + 100, startY - 200, 500, 30);
+                addCoin(safeStart + 250, startY - 140);
+                addCoin(safeStart + 400, startY - 60);
+                endX = safeStart + 600;
+                endY = startY - 170;
+                break;
+            case 29:
+                addBlock(safeStart, startY, 200, 400);
+                addBlock(safeStart + 300, startY + 350, 300, 400);
+                addSpike(safeStart + 220, startY + 360, 40);
+                addCoin(safeStart + 150, startY - 60);
+                addEnemy(safeStart + 450, startY + 300);
+                endX = safeStart + 600;
+                endY = startY + 350;
+                break;
+            case 30:
+                addBlock(safeStart, startY, 60, 500);
+                addBlock(safeStart + 300, startY, 60, 500);
+                addBlock(safeStart + 60, startY - 30, 240, 30);
+                addSpike(safeStart + 120, startY - 30, 40);
+                addSpike(safeStart + 200, startY - 30, 40);
+                addCoin(safeStart + 160, startY - 80);
+                endX = safeStart + 360;
+                break;
+            case 31:
+                addBlock(safeStart, startY, 150, 30);
+                addBlock(safeStart + 200, startY + 100, 150, 30);
+                addBlock(safeStart + 400, startY + 200, 150, 30);
+                addCoin(safeStart + 70, startY - 50);
+                addCoin(safeStart + 270, startY + 50);
+                addEnemy(safeStart + 450, startY + 170);
+                endX = safeStart + 550;
+                endY = startY + 200;
+                break;
+            case 32:
+                addBlock(safeStart, startY, 900, 30);
+                addSpike(safeStart + 150, startY - 40, 40);
+                addSpike(safeStart + 350, startY - 40, 40);
+                addSpike(safeStart + 550, startY - 40, 40);
+                addSpike(safeStart + 750, startY - 40, 40);
+                addCoin(safeStart + 250, startY - 80);
+                addCoin(safeStart + 650, startY - 80);
+                endX = safeStart + 900;
+                break;
+            case 33:
+                addBlock(safeStart, startY, 150, 30);
+                addBlock(safeStart + 200, startY + 120, 150, 30);
+                addBlock(safeStart + 400, startY + 240, 150, 30);
+                addBlock(safeStart + 600, startY + 360, 200, 400);
+                addCoin(safeStart + 70, startY - 50);
+                addCoin(safeStart + 270, startY + 70);
+                addCoin(safeStart + 470, startY + 190);
+                endX = safeStart + 800;
+                endY = startY + 360;
+                break;
+            case 34:
+                addBlock(safeStart, startY, 100, 20);
+                addBlock(safeStart + 220, startY, 100, 20);
+                addBlock(safeStart + 440, startY, 100, 20);
+                addBlock(safeStart + 600, startY, 200, 400);
+                addCoin(safeStart + 100, startY - 50);
+                addCoin(safeStart + 340, startY - 50);
+                addEnemy(safeStart + 650, startY - 30);
+                endX = safeStart + 800;
+                break;
+            case 35:
+                addBlock(safeStart, startY, 600, 40);
+                addBlock(safeStart + 250, startY + 40, 100, 400);
+                addSpike(safeStart + 150, startY - 40, 40);
+                addSpike(safeStart + 450, startY - 40, 40);
+                addCoin(safeStart + 280, startY - 80);
+                addCoin(safeStart + 280, startY - 150);
+                endX = safeStart + 600;
+                break;
+            case 36:
+                addBlock(safeStart, startY, 100, 400);
+                addBlock(safeStart + 250, startY - 50, 100, 500);
+                addBlock(safeStart + 450, startY - 150, 100, 600);
+                addCoin(safeStart + 280, startY - 150);
+                addCoin(safeStart + 480, startY - 250);
+                endX = safeStart + 550;
+                endY = startY - 150;
+                break;
+            case 37:
+                addBlock(safeStart, startY, 700, 30);
+                addBlock(safeStart, startY - 250, 30, 250);
+                addBlock(safeStart + 670, startY - 250, 30, 250);
+                addSpike(safeStart + 150, startY - 40, 40);
+                addSpike(safeStart + 350, startY - 40, 40);
+                addSpike(safeStart + 550, startY - 40, 40);
+                addCoin(safeStart + 70, startY - 100);
+                addCoin(safeStart + 630, startY - 100);
+                addEnemy(safeStart + 350, startY - 80);
+                endX = safeStart + 700;
+                endY = startY - 220;
+                break;
+            case 38:
+                addBlock(safeStart, startY, 30, 400);
+                addBlock(safeStart + 100, startY - 200, 200, 30);
+                addBlock(safeStart + 300, startY - 200, 30, 400);
+                addBlock(safeStart + 230, startY - 400, 200, 30);
+                addCoin(safeStart + 180, startY - 280);
+                addCoin(safeStart + 280, startY - 480);
+                endX = safeStart + 430;
+                endY = startY - 400;
+                break;
+            case 39:
+                addBlock(safeStart, startY, 120, 20);
+                addBlock(safeStart + 200, startY - 80, 120, 20);
+                addBlock(safeStart + 400, startY - 160, 120, 20);
+                addBlock(safeStart + 540, startY - 80, 200, 400);
+                addCoin(safeStart + 60, startY - 50);
+                addCoin(safeStart + 260, startY - 130);
+                addCoin(safeStart + 460, startY - 210);
+                endX = safeStart + 740;
+                endY = startY - 80;
+                break;
+            case 40:
+                addBlock(safeStart, startY - 400, 30, 500);
+                addBlock(safeStart + 200, startY - 400, 30, 500);
+                addBlock(safeStart + 30, startY - 400, 170, 30);
+                addCoin(safeStart + 110, startY - 460);
+                endX = safeStart + 230;
+                endY = startY - 400;
+                break;
+            case 41:
+                addBlock(safeStart, startY, 80, 300);
+                addBlock(safeStart + 140, startY - 80, 60, 20);
+                addBlock(safeStart + 260, startY, 40, 200);
+                addBlock(safeStart + 360, startY - 120, 60, 20);
+                addBlock(safeStart + 480, startY, 100, 400);
+                addCoin(safeStart + 170, startY - 130);
+                addCoin(safeStart + 390, startY - 170);
+                endX = safeStart + 580;
+                break;
+            case 42:
+                addBlock(safeStart, startY, 800, 30);
+                addBlock(safeStart + 800, startY + 30, 100, 400);
+                addSpike(safeStart + 700, startY - 40, 40);
+                addCoin(safeStart + 400, startY - 80);
+                addEnemy(safeStart + 350, startY - 30);
+                endX = safeStart + 900;
+                endY = startY + 30;
+                break;
+            case 43:
+                addBlock(safeStart + 150, startY - 200, 400, 200);
+                addBlock(safeStart, startY, 100, 400);
+                addBlock(safeStart + 600, startY, 100, 400);
+                addCoin(safeStart + 330, startY - 280);
+                endX = safeStart + 700;
+                endY = startY - 200;
+                break;
+            case 44:
+                addBlock(safeStart, startY, 600, 30);
+                addBlock(safeStart + 100, startY - 80, 400, 30);
+                addBlock(safeStart + 200, startY - 160, 200, 30);
+                addBlock(safeStart + 250, startY - 240, 100, 30);
+                addSpike(safeStart + 50, startY - 40, 40);
+                addSpike(safeStart + 510, startY - 40, 40);
+                addCoin(safeStart + 280, startY - 120);
+                addCoin(safeStart + 290, startY - 200);
+                addCoin(safeStart + 280, startY - 300);
+                endX = safeStart + 600;
+                endY = startY - 240;
+                break;
+            case 45:
+                addBlock(safeStart, startY, 30, 400);
+                addBlock(safeStart + 80, startY - 100, 30, 400);
+                addBlock(safeStart + 160, startY, 30, 400);
+                addBlock(safeStart + 240, startY - 100, 30, 400);
+                addBlock(safeStart + 320, startY, 30, 400);
+                addCoin(safeStart + 40, startY - 150);
+                addCoin(safeStart + 200, startY - 150);
+                addCoin(safeStart + 280, startY - 250);
+                endX = safeStart + 350;
+                break;
+            case 46:
+                addBlock(safeStart, startY, 400, 30);
+                addBlock(safeStart, startY - 250, 400, 30);
+                addBlock(safeStart, startY - 250, 30, 250);
+                addBlock(safeStart + 370, startY - 250, 30, 250);
+                addBlock(safeStart + 100, startY - 150, 200, 30);
+                addCoin(safeStart + 180, startY - 220);
+                addEnemy(safeStart + 150, startY - 180);
+                endX = safeStart + 400;
+                endY = startY - 250;
+                break;
+            case 47:
+                addBlock(safeStart, startY, 500, 300);
+                addSpike(safeStart + 80, startY - 40, 40);
+                addSpike(safeStart + 200, startY - 40, 40);
+                addSpike(safeStart + 320, startY - 40, 40);
+                addCoin(safeStart + 140, startY - 100);
+                addCoin(safeStart + 260, startY - 100);
+                endX = safeStart + 500;
+                break;
+            case 48:
+                addBlock(safeStart, startY - 500, 30, 600);
+                addBlock(safeStart + 30, startY - 100, 100, 20);
+                addBlock(safeStart + 30, startY - 250, 100, 20);
+                addBlock(safeStart + 30, startY - 400, 100, 20);
+                addBlock(safeStart + 30, startY - 550, 100, 20);
+                addCoin(safeStart + 70, startY - 180);
+                addCoin(safeStart + 70, startY - 330);
+                addCoin(safeStart + 70, startY - 480);
+                endX = safeStart + 130;
+                endY = startY - 500;
+                break;
+            case 49:
+                addBlock(safeStart, startY, 200, 400);
+                addSpike(safeStart + 220, startY - 40, 40);
+                addBlock(safeStart + 300, startY - 100, 100, 30);
+                addBlock(safeStart + 500, startY - 200, 100, 30);
+                addBlock(safeStart + 700, startY - 300, 200, 500);
+                addCoin(safeStart + 340, startY - 160);
+                addCoin(safeStart + 540, startY - 260);
+                addEnemy(safeStart + 750, startY - 350);
+                endX = safeStart + 900;
+                endY = startY - 300;
+                break;
+            case 50:
+                addBlock(safeStart, startY, 80, 400);
+                addBlock(safeStart + 150, startY - 150, 80, 400);
+                addBlock(safeStart + 300, startY - 300, 80, 400);
+                addCoin(safeStart + 40, startY - 100);
+                addCoin(safeStart + 190, startY - 250);
+                addCoin(safeStart + 340, startY - 400);
+                endX = safeStart + 380;
+                endY = startY - 300;
+                break;
+            case 51:
+                addBlock(safeStart, startY, 200, 20);
+                addBlock(safeStart + 280, startY - 50, 200, 20);
+                addBlock(safeStart + 560, startY - 100, 200, 20);
+                addCoin(safeStart + 100, startY - 70);
+                addCoin(safeStart + 380, startY - 120);
+                addCoin(safeStart + 660, startY - 170);
+                endX = safeStart + 760;
+                endY = startY - 100;
+                break;
+            case 52:
+                addBlock(safeStart, startY, 600, 40);
+                addBlock(safeStart, startY + 200, 600, 40);
+                addSpike(safeStart + 200, startY + 160, 40);
+                addSpike(safeStart + 450, startY + 160, 40);
+                addCoin(safeStart + 100, startY + 80);
+                addCoin(safeStart + 350, startY + 80);
+                endX = safeStart + 600;
+                endY = startY + 200;
+                break;
+            case 53:
+                addBlock(safeStart, startY, 200, 30);
+                addBlock(safeStart + 50, startY + 150, 200, 30);
+                addBlock(safeStart - 50, startY + 300, 200, 30);
+                addBlock(safeStart + 50, startY + 450, 200, 400);
+                addCoin(safeStart + 100, startY + 80);
+                addCoin(safeStart + 50, startY + 380);
+                endX = safeStart + 250;
+                endY = startY + 450;
+                break;
+            case 54:
+                addBlock(safeStart, startY, 400, 30);
+                addBlock(safeStart + 400, startY - 200, 30, 230);
+                addBlock(safeStart + 200, startY - 200, 230, 30);
+                addBlock(safeStart + 200, startY - 400, 30, 230);
+                addBlock(safeStart + 200, startY - 400, 400, 30);
+                addCoin(safeStart + 300, startY - 150);
+                addCoin(safeStart + 350, startY - 350);
+                addCoin(safeStart + 550, startY - 450);
+                endX = safeStart + 600;
+                endY = startY - 400;
+                break;
+            case 55:
+                addBlock(safeStart, startY - 200, 60, 200);
+                addBlock(safeStart + 150, startY - 350, 60, 200);
+                addBlock(safeStart + 300, startY - 250, 60, 200);
+                addBlock(safeStart + 450, startY, 200, 400);
+                addCoin(safeStart + 170, startY - 420);
+                addCoin(safeStart + 320, startY - 320);
+                endX = safeStart + 650;
+                endY = startY - 250;
+                break;
+            case 56:
+                addBlock(safeStart, startY, 700, 30);
+                addBlock(safeStart, startY - 300, 30, 300);
+                addBlock(safeStart + 670, startY - 300, 30, 300);
+                addBlock(safeStart + 150, startY - 150, 80, 20);
+                addBlock(safeStart + 470, startY - 150, 80, 20);
+                addBlock(safeStart + 300, startY - 250, 100, 20);
+                addCoin(safeStart + 180, startY - 200);
+                addCoin(safeStart + 470, startY - 200);
+                addCoin(safeStart + 340, startY - 300);
+                addEnemy(safeStart + 350, startY - 280);
+                endX = safeStart + 700;
+                endY = startY - 270;
+                break;
+            case 57:
+                addBlock(safeStart, startY, 100, 30);
+                addBlock(safeStart + 80, startY - 100, 100, 30);
+                addBlock(safeStart + 60, startY - 200, 100, 30);
+                addBlock(safeStart + 100, startY - 300, 100, 30);
+                addBlock(safeStart + 200, startY - 350, 200, 400);
+                addCoin(safeStart + 120, startY - 150);
+                addCoin(safeStart + 100, startY - 350);
+                endX = safeStart + 400;
+                endY = startY - 350;
+                break;
+            case 58:
+                addBlock(safeStart, startY, 250, 30);
+                addBlock(safeStart + 350, startY - 300, 250, 30);
+                addBlock(safeStart + 700, startY - 600, 200, 600);
+                addCoin(safeStart + 100, startY - 100);
+                addCoin(safeStart + 450, startY - 400);
+                endX = safeStart + 900;
+                endY = startY - 600;
+                break;
+            case 59:
+                addBlock(safeStart, startY, 150, 400);
+                addBlock(safeStart + 250, startY - 200, 150, 400);
+                addBlock(safeStart + 500, startY - 400, 150, 600);
+                addCoin(safeStart + 320, startY - 300);
+                addCoin(safeStart + 570, startY - 500);
+                endX = safeStart + 650;
+                endY = startY - 400;
+                break;
+            case 60:
+                addBlock(safeStart, startY, 500, 30);
+                addBlock(safeStart, startY - 250, 500, 30);
+                addBlock(safeStart, startY - 250, 30, 250);
+                addBlock(safeStart + 470, startY - 250, 30, 250);
+                addBlock(safeStart + 100, startY - 100, 100, 20);
+                addBlock(safeStart + 300, startY - 180, 100, 20);
+                addSpike(safeStart + 200, startY - 40, 40);
+                addSpike(safeStart + 350, startY - 40, 40);
+                addCoin(safeStart + 140, startY - 150);
+                addCoin(safeStart + 340, startY - 230);
+                endX = safeStart + 500;
+                endY = startY - 220;
+                break;
+            case 61:
+                addBlock(safeStart, startY, 80, 600);
+                addBlock(safeStart + 200, startY - 500, 80, 600);
+                addBlock(safeStart + 80, startY - 100, 40, 20);
+                addBlock(safeStart + 120, startY - 250, 40, 20);
+                addBlock(safeStart + 80, startY - 400, 40, 20);
+                addCoin(safeStart + 100, startY - 180);
+                addCoin(safeStart + 140, startY - 330);
+                endX = safeStart + 280;
+                endY = startY - 500;
+                break;
+            case 62:
+                addBlock(safeStart, startY, 100, 400);
+                addBlock(safeStart + 200, startY - 100, 80, 20);
+                addBlock(safeStart + 350, startY - 200, 80, 20);
+                addBlock(safeStart + 500, startY - 300, 80, 20);
+                addBlock(safeStart + 650, startY - 400, 200, 600);
+                addCoin(safeStart + 240, startY - 150);
+                addCoin(safeStart + 390, startY - 250);
+                addCoin(safeStart + 540, startY - 350);
+                endX = safeStart + 850;
+                endY = startY - 400;
+                break;
+            case 63:
+                addBlock(safeStart, startY, 400, 30);
+                addBlock(safeStart + 100, startY + 150, 200, 30);
+                addBlock(safeStart + 150, startY + 300, 100, 400);
+                addSpike(safeStart + 130, startY + 120, 30);
+                addSpike(safeStart + 270, startY + 120, 30);
+                addCoin(safeStart + 180, startY + 80);
+                addCoin(safeStart + 200, startY + 220);
+                endX = safeStart + 500;
+                endY = startY + 150;
+                break;
+            case 64:
+                addBlock(safeStart, startY, 150, 20);
+                addBlock(safeStart + 200, startY - 150, 150, 20);
+                addBlock(safeStart + 400, startY - 300, 150, 20);
+                addBlock(safeStart + 600, startY - 450, 200, 500);
+                addCoin(safeStart + 70, startY - 60);
+                addCoin(safeStart + 270, startY - 210);
+                addCoin(safeStart + 470, startY - 360);
+                addEnemy(safeStart + 680, startY - 480);
+                endX = safeStart + 800;
+                endY = startY - 450;
+                break;
+            case 65:
+                addBlock(safeStart, startY - 600, 40, 700);
+                addBlock(safeStart + 150, startY - 600, 40, 700);
+                addBlock(safeStart + 40, startY - 100, 30, 20);
+                addBlock(safeStart + 120, startY - 250, 30, 20);
+                addBlock(safeStart + 40, startY - 400, 30, 20);
+                addBlock(safeStart + 120, startY - 550, 30, 20);
+                addCoin(safeStart + 50, startY - 180);
+                addCoin(safeStart + 120, startY - 330);
+                addCoin(safeStart + 50, startY - 480);
+                endX = safeStart + 190;
+                endY = startY - 600;
+                break;
+            case 66:
+                addBlock(safeStart, startY, 600, 30);
+                addBlock(safeStart + 100, startY - 150, 400, 30);
+                addBlock(safeStart + 200, startY - 300, 200, 30);
+                addBlock(safeStart + 250, startY - 450, 100, 30);
+                addSpike(safeStart + 200, startY - 40, 40);
+                addSpike(safeStart + 400, startY - 40, 40);
+                addSpike(safeStart + 300, startY - 190, 40);
+                addCoin(safeStart + 150, startY - 100);
+                addCoin(safeStart + 380, startY - 220);
+                addCoin(safeStart + 280, startY - 370);
+                addCoin(safeStart + 280, startY - 520);
+                endX = safeStart + 600;
+                endY = startY - 450;
+                break;
+            case 67:
+                addBlock(safeStart, startY, 100, 400);
+                addBlock(safeStart + 300, startY - 300, 80, 500);
+                addBlock(safeStart + 550, startY - 600, 80, 700);
+                addCoin(safeStart + 330, startY - 400);
+                addCoin(safeStart + 580, startY - 700);
+                endX = safeStart + 630;
+                endY = startY - 600;
+                break;
+            case 68:
+                addBlock(safeStart, startY, 500, 30);
+                addBlock(safeStart, startY - 200, 500, 30);
+                addBlock(safeStart, startY - 200, 30, 200);
+                addBlock(safeStart + 470, startY - 200, 30, 200);
+                addBlock(safeStart + 200, startY, 100, 200);
+                addSpike(safeStart + 100, startY - 40, 40);
+                addSpike(safeStart + 400, startY - 40, 40);
+                addCoin(safeStart + 100, startY - 100);
+                addCoin(safeStart + 400, startY - 100);
+                addCoin(safeStart + 240, startY - 100);
+                addEnemy(safeStart + 350, startY - 230);
+                endX = safeStart + 500;
+                endY = startY - 170;
+                break;
+            case 69:
+                addBlock(safeStart, startY, 200, 400);
+                addSpike(safeStart + 220, startY - 40, 40);
+                addBlock(safeStart + 300, startY - 100, 100, 30);
+                addSpike(safeStart + 420, startY - 100, 40);
+                addBlock(safeStart + 500, startY - 200, 100, 30);
+                addSpike(safeStart + 620, startY - 200, 40);
+                addBlock(safeStart + 700, startY - 300, 200, 500);
+                addBlock(safeStart + 150, startY - 200, 50, 20);
+                addBlock(safeStart + 400, startY - 350, 50, 20);
+                addCoin(safeStart + 170, startY - 250);
+                addCoin(safeStart + 340, startY - 160);
+                addCoin(safeStart + 540, startY - 260);
+                addCoin(safeStart + 750, startY - 400);
+                addEnemy(safeStart + 750, startY - 330);
+                endX = safeStart + 900;
+                endY = startY - 300;
+                break;
+        }
+
+    let startBlockIndex = 0;
+    for (let i = world.blocks.length - 1; i >= 0; i--) {
+        if (!world.blocks[i].neon) {
+            world.blocks[i].neon = chunkNeon;
+        } else {
+            startBlockIndex = i + 1;
+            break;
+        }
+    }
+
+    world.chunkCount++;
+    if (world.chunkCount % 3 === 0) {
+        addCheckpoint(endX, endY);
+    }
+
+    addEnemy(safeStart + Math.random() * (endX - safeStart - 100) + 50, Math.min(startY, endY) - 30);
+
+    world.lastChunkX = endX;
+    world.lastChunkY = endY;
+    world.minY = Math.min(world.minY, endY);
+    world.maxY = Math.max(world.maxY, endY);
+
+    if (world.buildings.length < 50) {
+        for (let i = 0; i < 3; i++) {
+            world.buildings.push({
+                x: endX + Math.random() * 600,
+                w: 50 + Math.random() * 150,
+                h: 200 + Math.random() * 500,
+                color: `rgba(15,15,35,0.8)`
+            });
+        }
+    }
+}
+
+function initWorld() {
+    world.blocks = [];
+    world.spikes = [];
+    world.checkpoints = [];
+    world.buildings = [];
+    world.coins = [];
+    world.enemies = [];
+    world.shopRobots = [];
+    world.lastChunkX = -200;
+    world.lastChunkY = 200;
+    world.minY = 200;
+    world.maxY = 200;
+    world.generatedChunks = [];
+    world.chunkCount = 0;
+
+    addBlock(-500, 200, 1000, 600);
+    world.blocks[0].neon = '#00ffcc';
+    world.lastChunkX = 500;
+
+    lastCheckpoint = {x: 0, y: 100};
+
+    for (let i = 0; i < 10; i++) {
+        createArchitecturalChunk();
+    }
+
+    world.isGenerated = true;
+}
+
+function respawnAtCheckpoint() {
+    player.x = lastCheckpoint.x;
+    player.y = lastCheckpoint.y;
+    player.dx = 0;
+    player.dy = 0;
+    player.dashActive = false;
+    player.dashCooldown = 0;
+    player.dashTimer = 0;
+    player.trail = [];
+    screenShake = 10;
+    stylishCombo = 0;
+    
+    // --- SOLUCIÓN AL BUG DE TEMBLOR Y MUERTE INFINITA ---
+    // Ajustamos la cámara instantáneamente al jugador para evitar
+    // que se quede atrás y detecte caída fuera de pantalla al reaparecer.
+    world.camX = player.x - 300;
+    world.camY = player.y - 250;
+
+    spawnParticles(player.x, player.y, '#00ffcc', 20, 5);
+
+    if (dog.unlocked) {
+        dog.x = lastCheckpoint.x - 60;
+        dog.y = lastCheckpoint.y;
+        dog.vx = 0;
+        dog.vy = 0;
+        dog.targetEnemy = null;
+        dog.state = 'follow';
+    }
+}
+
+function startGame() {
+    bgMusic.currentTime = 0;
+    bgMusic.volume = 0.5;
+    bgMusic.play().catch(e => console.log('Audio autoplay blocked'));
+
+    overlay.style.display = 'none';
+    pauseBtn.style.display = 'block';
+    
+    player.x = 0;
+    player.y = 100;
+    player.dx = 0;
+    player.dy = 0;
+    player.trail = [];
+    player.maxHeight = 0;
+    particles = [];
+    coins = 0;
+    distance = 0;
+    stylishCombo = 0;
+    stylishText = '';
+    stylishTimer = 0;
+    meatInventory = 0;
+    magnetUnlocked = false;
+    magnetActive = true;
+    rocketUnlocked = false;
+    rocketEnabled = true;
+    jetpackEnabled = true;
+    shieldActive = false;
+    shieldTimer = 0;
+    speedLines = [];
+    dogHunger = 100;
+    activeBoss = null;
+    bossArena = null;
+    bossActive = false;
+    zonesCleared = 0;
+    currentBiome = 0;
+    unlockedAnimals = ['dog'];
+    activeAnimal = 'dog';
+    document.getElementById('shield-display').style.display = 'none';
+    document.getElementById('dog-hunger-display').style.display = 'none';
+
+    for (let key in upgrades) {
+        upgrades[key].level = 0;
+        upgrades[key].cost = upgrades[key].baseCost;
+    }
+    //player.maxSpeed = 10;
+    //player.jumpForce = -12;
+
+    if (dog.unlocked) {
+        dog.x = -60;
+        dog.y = 100;
+        dog.vx = 0;
+        dog.vy = 0;
+        dog.state = 'follow';
+        dog.cooldown = 0;
+    }
+
+    world.isGenerated = false;
+    initWorld();
+
+    world.camX = player.x - 200;
+    world.camY = player.y - 200;
+    score = 0;
+    gameActive = true;
+
+    if (!animationId) loop();
+}
+
+function gameOver(msg) {
+    gameActive = false;
+    screenShake = 25;
+    pauseBtn.style.display = 'none';
+    spawnParticles(player.x, player.y, '#ff0080', 50, 15);
+    bgMusic.pause();
+    overlay.style.display = 'flex';
+    document.getElementById('overlay-title').innerText = "SISTEMA CAÍDO";
+    document.getElementById('overlay-msg').innerHTML = msg + "<br><br>Monedas: " + coins + " | Distancia: " + Math.floor(distance) + "m";
+}
+
+function spawnParticles(x, y, color, amount, speed) {
+    for (let i = 0; i < amount; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * speed,
+            vy: (Math.random() - 0.5) * speed,
+            life: 1.0,
+            color: color,
+            size: Math.random() * 4 + 2
+        });
+    }
+}
+
+function update() {
+    if (screenShake > 0) screenShake *= 0.9;
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].x += particles[i].vx;
+        particles[i].y += particles[i].vy;
+        particles[i].life -= 0.02;
+        if (particles[i].life <= 0) particles.splice(i, 1);
+    }
+
+    let moveInput = 0;
+    if (keys['KeyD']) moveInput += 1;
+    if (keys['KeyA']) moveInput -= 1;
+
+    if (moveInput !== 0) player.lastFacing = Math.sign(moveInput);
+
+    let currentAccel = player.grounded ? player.accel : player.airAccel;
+    let currentFriction = player.grounded ? player.friction : player.airFriction;
+
+    const actualMaxSpeed = (player.maxSpeed + (upgrades.speed.level * 0.5)) * getAnimalMultiplier('speed');
+
+    if (!player.dashActive) {
+        player.dx += moveInput * currentAccel;
+        if (Math.abs(player.dx) > actualMaxSpeed) {
+            player.dx = Math.sign(player.dx) * actualMaxSpeed;
+        }
+        if (moveInput === 0) player.dx *= currentFriction;
+    }
+
+    handleJetpack();
+    //Dash
+    const dashCooldownMax = Math.max(15, 80 - (upgrades.dash.level * 15));
+
+    // Recarga la capacidad de hacer dash aéreo al tocar el suelo o una pared
+    if (player.grounded || player.onWall) {
+        player.airDashUsed = false;
+    }
+
+    // Solo permite dashear si estás en el suelo, o si NO has usado tu dash aéreo aún
+    if (keys['Enter'] && !player.dashActive && player.dashCooldown <= 0 && (player.grounded || !player.airDashUsed)) {
+        player.dashActive = true;
+        if (!player.grounded) player.airDashUsed = true; // Consumimos el dash aéreo
+        
+        player.dashTimer = 10 + (upgrades.dash.level * 3);
+        player.dashCooldown = dashCooldownMax;
+
+        const dashSpeed = 32 + (upgrades.dash.level * 4);
+        let moveDir = (typeof moveInput !== 'undefined' && moveInput !== 0) ? moveInput : player.lastFacing;
+        player.dx = moveDir * dashSpeed;
+        player.dy = 0; 
+
+        keys['Enter'] = false;
+        playSound('dash');
+        showStylish('OVERDRIVE!', '#ff0080');
+        spawnParticles(player.x, player.y, '#ff0080', 15, 8);
+    }
+
+    if (player.dashActive) {
+        player.dashTimer--;
+        player.trail.push({x: player.x, y: player.y, a: 0.8, color: '#fff'});
+        
+        if (player.dashTimer <= 0) {
+            player.dashActive = false;
+        }
+    }
+    
+    if (player.dashCooldown > 0) player.dashCooldown--;
+
+    if (player.dy > 0 && !player.dashActive) {
+        player.dy += 0.4;
+    }
+
+    player.dy += player.gravity;
+    //Agregado para Hold
+    if (!keys['KeyW'] && player.dy < 0 && !player.dashActive) {
+        player.dy *= 0.80; // Entre más cerca de 0, más rápido caerá al soltar. (0.80 es un buen balance).
+    }
+
+    if (player.onWall && player.dy > 0 && !player.grounded) {
+        if (player.dy > player.wallSlideSpeed) player.dy = player.wallSlideSpeed;
+    }
+    // Actualizado para Hold
+//    if (keys['KeyW']) { // Versiona antigua
+//        player.jumpBufferCounter = 10;
+//        keys['KeyW'] = false;
+//    }
+    if (keys['KeyW'] && !player.jumpHeld) {
+        player.jumpBufferCounter = 10;
+        player.jumpHeld = true; // Registra que la tecla se está manteniendo
+    }
+    if (!keys['KeyW']) {
+        player.jumpHeld = false; // Se resetea al soltar la tecla
+    }
+    if (player.jumpBufferCounter > 0) player.jumpBufferCounter--;
+
+    if (player.grounded) {
+        player.coyoteCounter = 10;
+    } else {
+        player.coyoteCounter--;
+    }
+
+    if (player.jumpBufferCounter > 0) {
+        const actualJumpForce = (player.jumpForce - (upgrades.jump.level * 0.3)) * getAnimalMultiplier('jump');
+
+        if (player.coyoteCounter > 0) {
+            player.dy = actualJumpForce;
+            player.grounded = false;
+            player.coyoteCounter = 0;
+            player.jumpBufferCounter = 0;
+            playSound('jump');
+        } else if (player.onWall) {
+            player.dy = actualJumpForce;
+            player.dx = -player.wallDir * 4;
+            player.onWall = false;
+            player.jumpBufferCounter = 0;
+            playSound('jump');
+            showStylish('WALL JUMP!', '#00ffcc');
+            spawnParticles(player.x + (player.wallDir > 0 ? player.w : 0), player.y + player.h/2, '#fff', 5);
+        }
+    }
+
+    player.x += player.dx;
+    player.onWall = false;
+    checkCollisions('x');
+
+    player.y += player.dy;
+    checkCollisions('y');
+
+    if (player.grounded) {
+        if (!player.wasGrounded && stylishCombo > 0) {
+            if (Math.abs(player.dx) > 5) {
+                showStylish('SLIDE!', '#ffcc00');
+            }
+        }
+        stylishCombo = 0;
+    }
+    player.wasGrounded = player.grounded;
+
+    if (player.grounded) player.wheelSpeed = player.dx * 0.15;
+    else player.wheelSpeed *= 0.98;
+    player.wheelAngle += player.wheelSpeed;
+
+    let targetKmh = 0;
+    if (Math.abs(player.dx) <= player.maxSpeed + 1) {
+        targetKmh = (Math.abs(player.dx) / player.maxSpeed) * 35;
+    } else {
+        targetKmh = 35 + ((Math.abs(player.dx) - player.maxSpeed) / (32 - player.maxSpeed)) * 465;
+    }
+
+    const accelRate = targetKmh > player.displaySpeed ? 80.0 : 45.0;
+    player.displaySpeed += (targetKmh - player.displaySpeed) / accelRate;
+    player.displaySpeed = Math.max(0, Math.min(500, player.displaySpeed));
+
+    for (let s of world.spikes) {
+        if (player.x + player.w > s.x && player.x < s.x + s.w &&
+            player.y + player.h > s.y && player.y < s.y + 40) {
+            if (shieldActive) {
+                spawnParticles(player.x + player.w/2, player.y + player.h/2, '#00ccff', 10, 5);
+                showStylish('🛡️ ESCUDO TE SALVÓ!', '#00ccff');
+            } else {
+                playSound('kill');
+                respawnAtCheckpoint();
+                return;
+            }
+        }
+    }
+
+    for (let e of world.enemies) {
+        if (e.dead) continue;
+
+        if (e.flies) {
+            // Flying enemies orbit or hover
+            e.flyAngle = (e.flyAngle || 0) + 0.04;
+            e.x += Math.cos(e.flyAngle) * (e.dx || 2);
+            e.y += Math.sin(e.flyAngle) * 1.5;
+        } else {
+            e.dy += player.gravity;
+            e.y += e.dy;
+            e.grounded = false;
+            for (let b of world.blocks) {
+                if (e.x < b.x + b.w && e.x + e.w > b.x &&
+                    e.y < b.y + b.h && e.y + e.h > b.y) {
+                    if (e.dy > 0) { e.y = b.y - e.h; e.dy = 0; e.grounded = true; }
+                    else { e.y = b.y + b.h; e.dy = 0; }
+                    break;
+                }
+            }
+            if (e.grounded) {
+                e.x += e.dx * e.facing;
+                let nextX = e.x + e.w/2 + e.facing * (e.w/2 + 2);
+                let frontGrounded = false;
+                for (let b of world.blocks) {
+                    if (nextX >= b.x && nextX <= b.x + b.w &&
+                        e.y + e.h + 8 >= b.y && e.y + e.h <= b.y + 20) { frontGrounded = true; break; }
+                }
+                if (!frontGrounded) e.facing *= -1;
+                for (let b of world.blocks) {
+                    if (e.x < b.x + b.w && e.x + e.w > b.x && e.y < b.y + b.h && e.y + e.h > b.y) {
+                        e.facing *= -1; e.x += e.facing * 5; break;
+                    }
+                }
+            }
+        }
+
+        if (player.x + player.w > e.x && player.x < e.x + e.w &&
+            player.y + player.h > e.y && player.y < e.y + e.h) {
+            const reward = e.reward || 5;
+            if (player.dy > 0 && player.y + player.h < e.y + e.h / 2) {
+                e.hp = (e.hp || 1) - 1;
+                if (e.hp <= 0) {
+                    e.dead = true;
+                    if (e.explodes) spawnParticles(e.x + e.w/2, e.y + e.h/2, '#ff4400', 30, 10);
+                    if (e.splits && !e._split) {
+                        e._split = true;
+                        addEnemy(e.x - 20, e.y, 'slime');
+                        addEnemy(e.x + 20, e.y, 'slime');
+                    }
+                    coins += reward;
+                    spawnParticles(e.x + e.w/2, e.y + e.h/2, '#ff4400', 15, 6);
+                    showStylish('STOMP! +' + reward, '#ff4400');
+                } else {
+                    spawnParticles(e.x + e.w/2, e.y + e.h/2, '#ffaa00', 8, 4);
+                    showStylish('HIT! HP:' + e.hp, '#ffaa00');
+                }
+                player.dy = player.jumpForce * 0.7;
+                playSound('kill');
+            } else if (shieldActive) {
+                e.dead = true;
+                spawnParticles(e.x + e.w/2, e.y + e.h/2, '#00ccff', 20, 8);
+                spawnParticles(player.x + player.w/2, player.y + player.h/2, '#00ccff', 10, 5);
+                showStylish('🛡️ BLOQUEADO!', '#00ccff');
+                playSound('kill');
+                coins += reward;
+            } else {
+                playSound('kill');
+                respawnAtCheckpoint();
+                return;
+            }
+        }
+    }
+
+    for (let c of world.coins) {
+        if (c.collected) continue;
+        if (player.x + player.w > c.x - 10 && player.x < c.x + 10 &&
+            player.y + player.h > c.y - 10 && player.y < c.y + 10) {
+            c.collected = true;
+            coins++;
+            playSound('coin');
+            spawnParticles(c.x, c.y, '#ffcc00', 8, 4);
+        }
+        c.anim += 0.1;
+    }
+
+    // Caída
+    if (player.y > world.camY + canvas.height + 400) {
+        playSound('kill');
+        respawnAtCheckpoint();
+        return;
+    }
+
+    for (let cp of world.checkpoints) {
+        if (!cp.active && player.x > cp.x) {
+            cp.active = true;
+            score++;
+            lastCheckpoint = {x: cp.x, y: cp.y};
+            playSound('checkpoint');
+            showStylish('CHECKPOINT!', '#00ffcc');
+        }
+    }
+
+    // ========== LOGICA INTERACCION TIENDA ==========
+    let nearRobot = null;
+    for(let r of world.shopRobots) {
+        if (Math.abs((player.x + player.w/2) - (r.x + r.w/2)) < 150 &&
+            Math.abs((player.y + player.h/2) - (r.y + r.h/2)) < 150) {
+            nearRobot = r;
+            break;
+        }
+    }
+
+    const interactHint = document.getElementById('interact-hint');
+    if (nearRobot && !shopActive && gameActive) {
+        let screenX = nearRobot.x + nearRobot.w/2 - world.camX;
+        let screenY = nearRobot.y - 30 - world.camY;
+
+        interactHint.style.display = 'block';
+        interactHint.style.left = screenX + 'px';
+        interactHint.style.top = screenY + 'px';
+
+        if (keys['KeyE']) {
+            keys['KeyE'] = false;
+            openShop();
+        }
+    } else {
+        interactHint.style.display = 'none';
+    }
+
+    // ========== IMAN DE MONEDAS ==========
+    if (magnetUnlocked && magnetActive) {
+        for (let c of world.coins) {
+            if (c.collected) continue;
+            const dx = player.x + player.w/2 - c.x;
+            const dy = player.y + player.h/2 - c.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 250) {
+                const force = (250 - dist) / 250 * 8;
+                c.x += (dx / dist) * force;
+                c.y += (dy / dist) * force;
+            }
+        }
+    }
+
+    // ========== COHETE HORIZONTAL ==========
+    if (rocketUnlocked && rocketEnabled && keys['KeyR'] && jetpackFuel > 0) {
+        const rocketPower = 18;
+        player.dx = player.lastFacing * rocketPower;
+        jetpackFuel -= 2;
+        if (jetpackFuel < 0) jetpackFuel = 0;
+        spawnParticles(player.x + (player.lastFacing > 0 ? 0 : player.w), player.y + player.h/2, '#ff4400', 4, 5);
+        spawnParticles(player.x + (player.lastFacing > 0 ? 0 : player.w), player.y + player.h/2, '#ffcc00', 2, 3);
+        if (frameCount % 10 === 0) showStylish('ROCKET!', '#ff0080');
+        keys['KeyR'] = false;
+    }
+
+    // ========== ESCUDO A +200 KM/H ==========
+    if (player.displaySpeed >= 200) {
+        if (!shieldActive) {
+            shieldActive = true;
+            shieldTimer = 0;
+            showStylish('🛡️ ESCUDO ACTIVADO!', '#00ccff');
+            spawnParticles(player.x + player.w/2, player.y + player.h/2, '#00ccff', 20, 6);
+        }
+        shieldTimer++;
+    } else {
+        if (shieldActive && player.displaySpeed < 180) {
+            shieldActive = false;
+            document.getElementById('shield-display').style.display = 'none';
+        }
+    }
+
+    if (shieldActive) {
+        document.getElementById('shield-display').style.display = 'block';
+        // pulso del escudo
+        if (shieldTimer % 30 === 0) {
+            spawnParticles(player.x + player.w/2, player.y + player.h/2, '#00ccff', 8, 4);
+        }
+    }
+
+    // ========== LINEAS DE DESTELLO A ALTA VELOCIDAD ==========
+    if (player.displaySpeed >= 200) {
+        if (frameCount % 2 === 0) {
+            speedLines.push({
+                x: player.x + player.w/2 + (Math.random()-0.5)*40,
+                y: player.y + player.h/2 + (Math.random()-0.5)*40,
+                vx: -player.lastFacing * (15 + Math.random()*20),
+                vy: (Math.random()-0.5)*4,
+                life: 1.0,
+                len: 30 + Math.random()*60
+            });
+        }
+    }
+    for (let i = speedLines.length - 1; i >= 0; i--) {
+        speedLines[i].x += speedLines[i].vx;
+        speedLines[i].y += speedLines[i].vy;
+        speedLines[i].life -= 0.07;
+        if (speedLines[i].life <= 0) speedLines.splice(i, 1);
+    }
+
+    // ========== HAMBRE DEL PERRO ==========
+    if (dog.unlocked) {
+        if (frameCount % 120 === 0 && frameCount > 0) {
+            dogHunger = Math.max(0, dogHunger - 1);
+        }
+        const hungerDisplay = document.getElementById('dog-hunger-display');
+        const hungerText = document.getElementById('hunger-text');
+        hungerDisplay.style.display = 'block';
+        hungerText.textContent = Math.floor(dogHunger) + '%';
+        hungerText.style.color = dogHunger < 30 ? '#ff0000' : dogHunger < 60 ? '#ffaa00' : '#00ff00';
+        // Perro más lento y débil si tiene hambre
+        if (dogHunger <= 0) {
+            // Dog can't attack when starving
+            dog.state = 'follow';
+        }
+    }
+
+    updateBiome();
+    updateBoss();
+
+//    // Spawn boss every 20 zones - genera arena plana al llegar
+//    if (score > 0 && score % 20 === 0 && !bossActive && !activeBoss) {
+//        spawnBoss();
+//    }
+
+    // Apply animal speed/jump multipliers to player caps
+    const animalSpeedMult = getAnimalMultiplier('speed');
+    const animalJumpMult = getAnimalMultiplier('jump');
+    // These are applied passively via display; actual effect via multiplied max stats:
+    if (frameCount % 60 === 0) {
+        // Recompute player maxSpeed with animal bonus
+    }
+
+    updateDog();
+
+    if (player.x > world.lastChunkX - 2000) {
+        createArchitecturalChunk();
+    }
+
+    world.camX += (player.x - world.camX - 300) * 0.08;
+    world.camY += (player.y - world.camY - 250) * 0.08;
+
+    world.camY = Math.max(world.minY - 200, Math.min(world.maxY + 200, world.camY));
+
+    player.trail.forEach(t => t.a -= 0.08);
+    player.trail = player.trail.filter(t => t.a > 0);
+
+    distance = Math.max(distance, player.x / 100);
+    if (score > maxScore) maxScore = score;
+
+    scoreDisplay.innerText = `ZONA: ${score}`;
+    coinsDisplay.innerText = `💰 ${coins}`;
+    distDisplay.innerText = `📏 ${Math.floor(distance)}m`;
+    recordDisplay.innerText = `MÁXIMO: ${maxScore}`;
+    speedBar.style.width = `${player.dashCooldown > 0 ? 0 : 100}%`;
+
+    if (stylishTimer > 0) {
+        stylishTimer--;
+        stylishDisplay.innerText = stylishText;
+        stylishDisplay.style.opacity = stylishTimer / 60;
+    } else {
+        stylishDisplay.innerText = '';
+    }
+}
+
+function checkCollisions(axis) {
+    if (axis === 'y') player.grounded = false;
+
+    for (let b of world.blocks) {
+        if (player.x < b.x + b.w && player.x + player.w > b.x &&
+            player.y < b.y + b.h && player.y + player.h > b.y) {
+            if (axis === 'x') {
+                if (player.dx > 0) {
+                    player.x = b.x - player.w;
+                    player.wallDir = 1;
+                } else {
+                    player.x = b.x + b.w;
+                    player.wallDir = -1;
+                }
+                player.dx = 0;
+                player.onWall = true;
+            } else {
+                if (player.dy > 0) {
+                    player.y = b.y - player.h;
+                    player.dy = 0;
+                    player.grounded = true;
+                } else {
+                    player.y = b.y + b.h;
+                    player.dy = 0.1;
+                }
+            }
+        }
+    }
+}
+
+function loop() {
+    if (gameActive) update();
+    draw();
+    frameCount++;
+    animationId = requestAnimationFrame(loop);
+}
+
+function drawSpeedometer() {
+    const c = speedoCtx;
+    const W = 120, H = 120, cx = 60, cy = 68, R = 48;
+    c.clearRect(0, 0, W, H);
+
+    const kmh = Math.min(200, Math.max(0, player.displaySpeed));
+    const speedPct = kmh / 200; 
+
+    const startAngle = (Math.PI / 180) * 150;  
+    const endAngle   = (Math.PI / 180) * 390;  
+    const totalAngle = (Math.PI / 180) * 240;
+
+    c.beginPath();
+    c.arc(cx, cy, R, startAngle, startAngle + totalAngle);
+    c.strokeStyle = 'rgba(0,0,0,0.7)';
+    c.lineWidth = 12;
+    c.stroke();
+
+    c.beginPath();
+    c.arc(cx, cy, R + 6, 0, Math.PI * 2);
+    c.strokeStyle = 'rgba(0,255,204,0.25)';
+    c.lineWidth = 2;
+    c.stroke();
+
+    if (speedPct > 0) {
+        const grad = c.createLinearGradient(cx - R, cy, cx + R, cy);
+        grad.addColorStop(0, '#00ffcc');
+        grad.addColorStop(0.5, '#ffaa00');
+        grad.addColorStop(1, '#ff0080');
+        c.beginPath();
+        c.arc(cx, cy, R, startAngle, startAngle + totalAngle * speedPct);
+        c.strokeStyle = grad;
+        c.lineWidth = 12;
+        c.lineCap = 'round';
+        c.stroke();
+        c.lineCap = 'butt';
+    }
+
+    for (let i = 0; i <= 4; i++) {
+        const a = startAngle + totalAngle * (i / 4);
+        const x1 = cx + Math.cos(a) * (R - 14);
+        const y1 = cy + Math.sin(a) * (R - 14);
+        const x2 = cx + Math.cos(a) * (R + 2);
+        const y2 = cy + Math.sin(a) * (R + 2);
+        c.beginPath();
+        c.moveTo(x1, y1);
+        c.lineTo(x2, y2);
+        c.strokeStyle = '#888';
+        c.lineWidth = 1.5;
+        c.stroke();
+        const lx = cx + Math.cos(a) * (R - 24);
+        const ly = cy + Math.sin(a) * (R - 24);
+        c.fillStyle = '#aaa';
+        c.font = 'bold 8px Bungee, monospace';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(i * 50, lx, ly);
+    }
+
+    const needleAngle = startAngle + totalAngle * speedPct;
+    const nx = cx + Math.cos(needleAngle) * (R - 6);
+    const ny = cy + Math.sin(needleAngle) * (R - 6);
+    c.beginPath();
+    c.moveTo(cx, cy);
+    c.lineTo(nx, ny);
+    c.strokeStyle = '#fff';
+    c.lineWidth = 2;
+    c.lineCap = 'round';
+    c.stroke();
+    c.lineCap = 'butt';
+
+    c.beginPath();
+    c.arc(cx, cy, 5, 0, Math.PI * 2);
+    c.fillStyle = '#fff';
+    c.fill();
+
+    c.fillStyle = kmh > 150 ? '#ff0080' : kmh > 80 ? '#ffaa00' : '#00ffcc';
+    c.font = 'bold 14px Bungee, monospace';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(Math.floor(kmh), cx, cy + 20);
+
+    c.fillStyle = '#666';
+    c.font = '7px Bungee, monospace';
+    c.fillText('KM/H', cx, cy + 30);
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+
+    if (screenShake > 0) {
+        ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+    }
+
+    const biome = getCurrentBiome();
+    // Biome sky gradient
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    skyGrad.addColorStop(0, biome.skyTop || '#020205');
+    skyGrad.addColorStop(1, biome.skyBot || '#020210');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(-world.camX * 0.2, -world.camY * 0.1 + 100);
+    world.buildings.forEach(bg => {
+        ctx.fillStyle = bg.color;
+        ctx.fillRect(bg.x, canvas.height - bg.h, bg.w, bg.h);
+    });
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(-world.camX, -world.camY);
+
+    world.checkpoints.forEach(cp => {
+        ctx.fillStyle = cp.active ? '#00ffcc' : '#333';
+        ctx.fillRect(cp.x, cp.y - 100, 4, 100);
+        if (cp.active) {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00ffcc';
+            ctx.fillRect(cp.x - 10, cp.y - 110, 24, 10);
+            ctx.shadowBlur = 0;
+        }
+    });
+
+    world.blocks.forEach(b => {
+        ctx.fillStyle = biome.blockColor || '#0a0a15';
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        ctx.strokeStyle = b.neon || biome.blockBorder || '#00ffcc';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(b.x, b.y, b.w, b.h);
+    });
+
+    ctx.fillStyle = '#ff0080';
+    world.spikes.forEach(s => {
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y + 40);
+        ctx.lineTo(s.x + 20, s.y);
+        ctx.lineTo(s.x + 40, s.y + 40);
+        ctx.fill();
+    });
+
+    world.coins.forEach(c => {
+        if (c.collected) return;
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.rotate(c.anim);
+        ctx.fillStyle = '#ffcc00';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#ffcc00';
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffee44';
+        ctx.beginPath();
+        ctx.arc(-2, -2, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+
+    // ========== DIBUJAR LOS ROBOTS DE LA TIENDA ==========
+    world.shopRobots.forEach(r => {
+        ctx.save();
+        ctx.translate(r.x + r.w/2, r.y + r.h/2);
+        r.anim += 0.05;
+        let hover = Math.sin(r.anim) * 5;
+
+        // Sombra
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.beginPath();
+        ctx.ellipse(0, r.h/2, 20 - hover*0.5, 5, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // Cuerpo
+        ctx.fillStyle = '#222';
+        ctx.fillRect(-20, -25 + hover, 40, 50);
+
+        // Borde Neón
+        ctx.strokeStyle = '#00ffcc';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-20, -25 + hover, 40, 50);
+
+        // Pantalla y Cara
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-15, -20 + hover, 30, 20);
+        ctx.fillStyle = '#00ffcc';
+        ctx.fillRect(-10, -15 + hover, 6, 6);
+        ctx.fillRect(4, -15 + hover, 6, 6);
+
+        // Texto SHOP
+        ctx.fillStyle = '#ff0080';
+        ctx.font = 'bold 12px Bungee';
+        ctx.textAlign = 'center';
+        ctx.fillText('SHOP', 0, 15 + hover);
+
+        ctx.restore();
+    });
+
+    world.enemies.forEach(e => {
+        if (e.dead) return;
+        ctx.save();
+        ctx.translate(e.x + e.w/2, e.y + e.h/2);
+        ctx.scale(e.facing || 1, 1);
+        e._anim = (e._anim || 0) + 1;
+
+        const C  = e.color || '#ff4400';
+        const W = e.w, H = e.h;
+        const hw = W/2, hh = H/2;
+        const walk = Math.sin(e._anim * 0.25) * 4;
+
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = C;
+
+        if (e.flies) {
+            // Voladores: cuerpo + alas animadas
+            const hover = Math.sin(e._anim * 0.15) * 3;
+            // Ala izquierda
+            ctx.fillStyle = C;
+            ctx.globalAlpha = 0.7;
+            ctx.fillRect(-hw - W*0.4, -hh - 4 + hover, W*0.4, H*0.35);
+            // Ala derecha
+            ctx.fillRect(hw, -hh - 4 + hover, W*0.4, H*0.35);
+            ctx.globalAlpha = 1;
+            // Cuerpo
+            ctx.fillStyle = C;
+            ctx.fillRect(-hw, -hh + hover, W, H * 0.65);
+            // Cabeza
+            ctx.fillStyle = C;
+            ctx.fillRect(-hw*0.7, -hh - H*0.3 + hover, W*0.7, H*0.32);
+            // Ojos
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-hw*0.5, -hh - H*0.22 + hover, W*0.15, H*0.12);
+            ctx.fillRect(hw*0.05, -hh - H*0.22 + hover, W*0.15, H*0.12);
+        } else if (e.type === 'ninja' || e.type === 'runner' || e.type === 'speeder' || e.type === 'biker') {
+            // Corredor rápido: delgado, piernas largas animadas
+            // Pierna D
+            ctx.fillStyle = C;
+            ctx.fillRect(hw*0.05, hh*0.1 + walk*0.6, W*0.25, H*0.45);
+            // Pierna I
+            ctx.fillRect(-hw*0.3, hh*0.1 - walk*0.6, W*0.25, H*0.45);
+            // Torso
+            ctx.fillStyle = C;
+            ctx.fillRect(-hw*0.5, -hh*0.5, W*0.5, H*0.6);
+            // Brazo D
+            ctx.fillRect(hw*0.1, -hh*0.35 + walk*0.3, W*0.22, H*0.35);
+            // Brazo I
+            ctx.fillRect(-hw*0.55, -hh*0.35 - walk*0.3, W*0.22, H*0.35);
+            // Cabeza
+            ctx.fillStyle = C;
+            ctx.fillRect(-hw*0.45, -hh - H*0.28, W*0.45, H*0.3);
+            // Ojo
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-hw*0.15, -hh - H*0.19, W*0.12, H*0.1);
+        } else if (e.type === 'tank' || e.type === 'golem' || e.type === 'giant' || e.type === 'colossus' || e.type === 'heavyweight') {
+            // Tanque/pesado: ancho, piernas cortas
+            // Piernas
+            ctx.fillStyle = C;
+            ctx.fillRect(-hw*0.55, hh*0.15 + walk*0.3, W*0.35, H*0.38);
+            ctx.fillRect(hw*0.2, hh*0.15 - walk*0.3, W*0.35, H*0.38);
+            // Cuerpo grande
+            ctx.fillStyle = C;
+            ctx.fillRect(-hw, -hh*0.7, W, H*0.85);
+            // Detalle torso
+            ctx.fillStyle = '#000';
+            ctx.fillRect(-hw*0.6, -hh*0.3, W*0.3, H*0.2);
+            ctx.fillRect(hw*0.15, -hh*0.3, W*0.3, H*0.2);
+            // Brazos gruesos
+            ctx.fillStyle = C;
+            ctx.fillRect(-hw - W*0.28, -hh*0.5 + Math.sin(e._anim*0.1)*5, W*0.3, H*0.4);
+            ctx.fillRect(hw, -hh*0.5 - Math.sin(e._anim*0.1)*5, W*0.3, H*0.4);
+            // Cabeza cuadrada
+            ctx.fillStyle = C;
+            ctx.fillRect(-hw*0.7, -hh - H*0.35, W*0.7, H*0.37);
+            ctx.fillStyle = '#f00';
+            ctx.fillRect(-hw*0.5, -hh - H*0.24, W*0.15, H*0.12);
+            ctx.fillRect(hw*0.1, -hh - H*0.24, W*0.15, H*0.12);
+        } else if (e.type === 'slime') {
+            // Slime: blob sin piernas, rebota
+            const squash = 1 + Math.sin(e._anim * 0.2) * 0.15;
+            ctx.save();
+            ctx.scale(squash, 2 - squash);
+            ctx.fillStyle = C;
+            ctx.beginPath();
+            ctx.arc(0, 0, hw * 0.85, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-hw*0.3, -hh*0.25, W*0.18, H*0.2);
+            ctx.fillRect(hw*0.05, -hh*0.25, W*0.18, H*0.2);
+        } else {
+            // Enemigo estándar: humanoide con cubos
+            // Pierna D
+            ctx.fillStyle = C;
+            ctx.fillRect(hw*0.05, hh*0.05 + walk*0.5, W*0.28, H*0.4);
+            // Pierna I
+            ctx.fillRect(-hw*0.33, hh*0.05 - walk*0.5, W*0.28, H*0.4);
+            // Torso
+            ctx.fillStyle = C;
+            ctx.fillRect(-hw*0.6, -hh*0.55, W*0.6, H*0.6);
+            // Brazo D
+            ctx.fillRect(hw*0.15, -hh*0.4 - walk*0.25, W*0.22, H*0.35);
+            // Brazo I
+            ctx.fillRect(-hw*0.6, -hh*0.4 + walk*0.25, W*0.22, H*0.35);
+            // Cabeza
+            ctx.fillStyle = C;
+            ctx.fillRect(-hw*0.5, -hh - H*0.3, W*0.5, H*0.32);
+            // Ojos
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-hw*0.38, -hh - H*0.2, W*0.13, H*0.1);
+            ctx.fillRect(hw*0.0,  -hh - H*0.2, W*0.13, H*0.1);
+        }
+
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+
+        // HP bar if multi-hp
+        ctx.scale(e.facing || 1, 1);
+        if (e.maxHp > 1) {
+            const bW = e.w;
+            ctx.fillStyle = '#300';
+            ctx.fillRect(-bW/2, -hh - 10, bW, 5);
+            ctx.fillStyle = '#0f0';
+            ctx.fillRect(-bW/2, -hh - 10, bW * (e.hp / e.maxHp), 5);
+        }
+        ctx.restore();
+    });
+
+    player.trail.forEach(t => {
+        ctx.globalAlpha = t.a;
+        ctx.fillStyle = t.color;
+        ctx.fillRect(t.x, t.y, player.w, player.h);
+    });
+
+    ctx.globalAlpha = 1;
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+    });
+
+    ctx.globalAlpha = 1;
+
+    drawDog();
+    drawAnimalCompanion();
+
+    // Draw boss in world coords
+    ctx.save();
+    ctx.translate(-world.camX, -world.camY);
+    drawBoss();
+    ctx.restore();
+
+    // ========== LINEAS DE DESTELLO ==========
+    if (speedLines.length > 0) {
+        ctx.save();
+        ctx.translate(-world.camX, -world.camY);
+        for (let sl of speedLines) {
+            ctx.globalAlpha = sl.life * 0.8;
+            const grad = ctx.createLinearGradient(sl.x, sl.y, sl.x + sl.len * player.lastFacing, sl.y);
+            grad.addColorStop(0, '#fff');
+            grad.addColorStop(0.5, '#00ccff');
+            grad.addColorStop(1, 'transparent');
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 2 + sl.life * 2;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(sl.x, sl.y);
+            ctx.lineTo(sl.x + sl.len * player.lastFacing, sl.y);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        ctx.restore();
+    }
+
+    // ========== ESCUDO DEL ROBOT ==========
+    if (shieldActive) {
+        ctx.save();
+        ctx.translate(-world.camX, -world.camY);
+        const shieldPulse = 0.6 + Math.sin(shieldTimer * 0.15) * 0.3;
+        ctx.globalAlpha = shieldPulse * 0.7;
+        ctx.strokeStyle = '#00ccff';
+        ctx.lineWidth = 4;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#00ccff';
+        // Hexagonal shield
+        const sx = player.x + player.w/2;
+        const sy = player.y + player.h/2;
+        const sr = 35 + Math.sin(shieldTimer * 0.1) * 5;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2 - Math.PI / 6;
+            const px = sx + Math.cos(angle) * sr;
+            const py = sy + Math.sin(angle) * sr;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        // Inner glow fill
+        ctx.globalAlpha = shieldPulse * 0.15;
+        ctx.fillStyle = '#00ccff';
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(player.x + player.w/2, player.y + player.h/2);
+
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-player.w/2, -player.h/2, player.w, player.h - 10);
+
+    let wheelRadius = 10;
+    ctx.translate(0, player.h/2 - wheelRadius);
+    ctx.rotate(player.wheelAngle);
+    
+    ctx.fillStyle = '#00ff04';
+    ctx.beginPath();
+    ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#00ff04';
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.arc(-3, -3, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = '#525354';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-wheelRadius, 0);
+    ctx.lineTo(wheelRadius, 0);
+    ctx.moveTo(0, -wheelRadius);
+    ctx.lineTo(0, wheelRadius);
+    ctx.stroke()
+
+    ctx.restore();
+    ctx.restore();
+    ctx.restore();
+
+    drawSpeedometer();
+    drawSpeedometerTop();
+
+    // Boss arena overlay (drawn in screen space)
+    drawBossArena();
+
+    // Biome name indicator (top-left, small)
+    const bm = getCurrentBiome();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(18, 90, 140, 22);
+    ctx.fillStyle = bm.blockBorder || '#00ffcc';
+    ctx.font = 'bold 12px Bungee, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('🌍 ' + bm.name, 24, 106);
+
+    // Active animal indicator
+    const anim = getActiveAnimalData();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(18, 116, 140, 22);
+    ctx.fillStyle = anim.color || '#fff';
+    ctx.font = 'bold 12px Bungee, monospace';
+    ctx.fillText(anim.emoji + ' ' + anim.name.toUpperCase(), 24, 132);
+}
+
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# --- Editores de Código ---
+.vscode/
+.kilocode/
+.idea/
+.project
+.settings/
+
+# --- Archivos del Sistema ---
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# --- Archivos Temporales / Logs ---
+*.log
+*.tmp
+*.temp
+
+# --- Node (por si en el futuro usas paquetes) ---
+node_modules/
+npm-debug.log*
