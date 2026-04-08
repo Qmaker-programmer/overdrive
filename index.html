@@ -9,13 +9,24 @@
         @import url('https://fonts.googleapis.com/css2?family=Bungee&display=swap');
 
         body {
-            margin: 0; padding: 0;
-            background: #020205; color: #fff;
+            margin: 0; 
+            padding: 0;
+            background: #020205; 
+            color: #fff;
             font-family: 'Bungee', cursive;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            height: 100vh; overflow: hidden; user-select: none;
-            touch-action: none;
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center;
+            
+            /* Ajustes para móviles Andrésunesco */
+            width: 100vw; 
+            height: 100dvh; /* Altura dinámica para evitar barras de Chrome/Safari */
+            position: fixed; /* Bloquea el cuerpo para que no haya scroll fantasma */
+            
+            overflow: hidden; 
+            user-select: none;
+            touch-action: none; /* Evita zoom y gestos del navegador */
         }
 
         #game-container {
@@ -23,11 +34,43 @@
             box-shadow: 0 0 50px rgba(0, 255, 204, 0.2), 0 0 150px rgba(255, 0, 128, 0.1);
             border: 4px solid #222; background: #000;
             overflow: hidden; border-radius: 8px;
+            width: 100vw;
+            height: 100vh;
+            box-sizing: border-box;
         }
 
         canvas {
             display: block;
             image-rendering: pixelated;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Botón pantalla completa */
+        #fullscreen-btn {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            z-index: 50;
+            width: 38px;
+            height: 38px;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #00ffcc;
+            border-radius: 8px;
+            color: #00ffcc;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            pointer-events: auto;
+            padding: 0;
+            margin: 0;
+        }
+        #fullscreen-btn:hover, #fullscreen-btn:active {
+            background: rgba(0,255,204,0.2);
+            transform: scale(1.1);
         }
 
         .crt-overlay {
@@ -65,15 +108,6 @@
             box-shadow: 0 0 15px #ff0080; transition: width 0.1s;
         }
 
-        #speedometer {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 120px;
-            height: 120px;
-            z-index: 15;
-            pointer-events: none;
-        }
 
         #overlay, .menu-overlay {
             position: absolute; inset: 0;
@@ -143,8 +177,8 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            width: 100px;
-            height: 100px;
+            width: 100px !important;
+            height: 100px !important;
             z-index: 15;
             pointer-events: none;
         }
@@ -292,21 +326,20 @@
     <!-- Menú Principal -->
     <div id="overlay">
         <h1 id="overlay-title">Overdrive!</h1>
-        <p id="overlay-msg">
-            SISTEMA MEJORADO: FÍSICAS AVANZADAS Y GENERACIÓN LABERÍNTICA.<br><br>
-            Usa las paredes para impulsarte hacia arriba (Wall Jump).<br>
-            Recoge monedas y evita enemigos!
-        </p>
         <button id="start-btn" onclick="startGame()">NUEVA PARTIDA</button>
         <button id="load-btn" onclick="showLoadMenu()" style="border-color: #00ffcc; color: #00ffcc;">CARGAR PARTIDA</button>
+        <button onclick="openSettingsMenu()" style="border-color: #ffaa00; color: #ffaa00;">⚙️ SETTINGS</button>
     </div>
 
     <!-- Menú de Pausa / Guardar -->
     <div id="pause-overlay" class="menu-overlay">
         <h1 style="color: #00ffcc; text-shadow: 0 0 10px #00ffcc;">SISTEMA EN PAUSA</h1>
         <input type="text" id="save-name" placeholder="Nombre de Partida" autocomplete="off" maxlength="15">
-        <button onclick="saveGame()" style="border-color: #00ffcc; color: #00ffcc;">💾 GUARDAR PARTIDA</button>
-        <button onclick="resumeGame()">▶ CONTINUAR</button>
+        <button onclick="saveGame()" style="border-color: #00ffcc; color: #00ffcc;">💾 GUARDAR Y CONTINUAR</button>
+        <button onclick="saveAndClose()" style="border-color: #ff0080; color: #ff0080;">💾 GUARDAR Y CERRAR</button>
+        <button onclick="openSettingsMenu()" style="border-color: #aa66ff; color: #aa66ff;">⚙️ SETTINGS</button>
+        <button onclick="exportScorePDF()" style="border-color: #00ccff; color: #00ccff;">📊 EXPORTAR SCORE</button>
+        <button onclick="resumeGame()">▶ CONTINUAR SIN GUARDAR</button>
         <button onclick="goToMenu()" style="border-color: #ffaa00; color: #ffaa00;">SALIR AL MENÚ</button>
     </div>
 
@@ -317,10 +350,33 @@
         <button onclick="hideLoadMenu()">VOLVER</button>
     </div>
 
+    <!-- Menú de Settings -->
+    <div id="settings-overlay" class="menu-overlay">
+        <h1 style="color: #aa66ff; text-shadow: 0 0 10px #aa66ff;">⚙️ SETTINGS</h1>
+        <div style="margin: 20px 0; display: flex; flex-direction: column; gap: 15px; align-items: center;">
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; border: 1px solid #aa66ff; width: 300px;">
+                <div style="font-size: 14px; color: #aa66ff; margin-bottom: 10px;">🎵 Volumen Música</div>
+                <input type="range" id="music-volume" min="0" max="100" value="50" style="width: 100%; cursor: pointer;" oninput="updateMusicVolume(this.value)">
+                <div id="music-vol-text" style="font-size: 12px; color: #888; margin-top: 5px;">50%</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; border: 1px solid #00ffcc; width: 300px;">
+                <div style="font-size: 14px; color: #00ffcc; margin-bottom: 10px;">📊 Estadísticas</div>
+                <div style="font-size: 12px; color: #888; text-align: left;">
+                    <div>Zona Actual: <span id="settings-current-zone" style="color: #fff;">0</span></div>
+                    <div>GameOvers Totales: <span id="settings-total-gameovers" style="color: #ff4400;">0</span></div>
+                    <div>Monedas: <span id="settings-coins" style="color: #ffcc00;">0</span></div>
+                    <div>Distancia: <span id="settings-distance" style="color: #00ffcc;">0m</span></div>
+                </div>
+            </div>
+        </div>
+        <button onclick="closeSettingsMenu()">VOLVER</button>
+    </div>
+
     <div class="ui">
         <div id="score-display" style="font-size: 24px;">ZONA: 0</div>
         <div id="coins-display" style="color: #ffcc00; font-size: 18px;">💰 0</div>
         <div id="record-display" style="color: #ff0080; font-size: 14px;">MÁXIMO: 0</div>
+        <div id="gameover-display" style="color: #ff4400; font-size: 12px; display: none;">GameOvers: 0 (Total: 0)</div>
     </div>
 
     <!-- Botón de Pausa Flotante -->
@@ -334,16 +390,30 @@
     <div class="ui-right">
         <div id="dist-display" style="font-size: 18px;">📏 0m</div>
         <div id="stylish-display" style="color: #00ffcc; font-size: 14px;"></div>
-        <div id="jetpack-fuel-display" style="color: #ffaa00; font-size: 12px; display: none;">🎒 <span id="fuel-text">100%</span></div>
+        <div id="jetpack-fuel-display" style="color: #ffaa00; font-size: 12px; display: none;">🎒 <span id="fuel-text">FULL</span></div>
         <div id="shield-display" style="color: #00ccff; font-size: 14px; display: none;">🛡️ ESCUDO ACTIVO</div>
         <div id="dog-hunger-display" style="color: #ff8800; font-size: 12px; display: none;">🐕 <span id="hunger-text">100%</span></div>
     </div>
 
     <div id="speed-bar-container"><div id="speed-bar"></div></div>
-    <canvas id="speedometer" width="120" height="120"></canvas>
-
     <!-- Velocímetro en esquina superior derecha -->
     <canvas id="speedometer-top" width="100" height="100"></canvas>
+
+    <!-- Panel de combustible y hambre de mascota -->
+    <div id="resource-panel" style="position:absolute;top:20px;right:130px;z-index:15;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none;">
+        <div style="background:rgba(0,0,0,0.6);padding:5px 10px;border-radius:8px;border:1px solid #ff4400;">
+            <div style="font-size:10px;color:#ff8800;">⛽ COMBUSTIBLE</div>
+            <div style="width:80px;height:8px;background:#333;border-radius:4px;overflow:hidden;margin-top:2px;">
+                <div id="fuel-bar-top" style="height:100%;background:linear-gradient(90deg,#ff4400,#ffaa00);width:100%;"></div>
+            </div>
+        </div>
+        <div id="pet-hunger-container" style="background:rgba(0,0,0,0.6);padding:5px 10px;border-radius:8px;border:1px solid #ff8800;display:none;">
+            <div style="font-size:10px;color:#ff8800;">🍖 HAMBRE MASCOTA</div>
+            <div style="width:80px;height:8px;background:#333;border-radius:4px;overflow:hidden;margin-top:2px;">
+                <div id="pet-hunger-bar" style="height:100%;background:linear-gradient(90deg,#ff0000,#ffaa00,#00ff00);width:100%;"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- Overlay de Tienda -->
     <div id="shop-overlay">
@@ -387,8 +457,8 @@
                 <div class="shop-item-cost" id="heal-cost">💰 10</div>
             </div>
             <div class="shop-item" id="shop-meat" onclick="buyUpgrade('meat')">
-                <div class="shop-item-icon">🥩</div>
-                <div class="shop-item-name">Carne para el Perro</div>
+                <div class="shop-item-icon">🍖</div>
+                <div class="shop-item-name">Comida para Animales</div>
                 <div class="shop-item-level" id="meat-level">x0 en inv.</div>
                 <div class="shop-item-cost" id="meat-cost">💰 15</div>
             </div>
@@ -412,7 +482,7 @@
             </div>
         </div>
         <div style="color: #888; font-size: 12px; margin-bottom: 20px; max-width: 700px;">
-            🐕 El perro ataca enemigos | 🎒 Jetpack necesita gasolina | 🥩 Da carne al perro con [I] | 🧲 Atrae monedas | 🚀 Cohete horizontal | ⛽ Sin gasolina no hay potencia
+            🐕 El perro ataca enemigos | 🎒 Jetpack necesita gasolina | 🍖 Comida de animales con [I] | 🧲 Atrae monedas | 🚀 Cohete horizontal | ⛽ Sin gasolina no hay potencia
         </div>
         <button class="shop-btn" onclick="closeShop()">VOLVER AL JUEGO</button>
         <div style="margin-top:10px;font-size:11px;color:#555;">También puedes comprar y equip. animales en el 🎒 INVENTARIO [I]</div>
@@ -433,10 +503,10 @@
         <div id="inv-tab-items">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:20px;">
             <div style="background:rgba(255,204,0,0.1);border:2px solid #ffcc00;border-radius:10px;padding:15px;width:160px;">
-                <div style="font-size:28px;">🥩</div>
-                <div style="font-size:14px;color:#fff;margin:5px 0;">Carne</div>
+                <div style="font-size:28px;">🍖</div>
+                <div style="font-size:14px;color:#fff;margin:5px 0;">Comida Animal</div>
                 <div style="font-size:20px;color:#ffcc00;" id="inv-meat-count">x0</div>
-                <button onclick="feedDog()" style="margin-top:8px;padding:8px 15px;font-size:13px;font-family:'Bungee';background:transparent;color:#ff0080;border:2px solid #ff0080;cursor:pointer;" onmouseover="this.style.background='#ff0080';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#ff0080'">🐕 DAR AL COMPAÑERO</button>
+                <button onclick="feedPet()" style="margin-top:8px;padding:8px 15px;font-size:13px;font-family:'Bungee';background:transparent;color:#ff0080;border:2px solid #ff0080;cursor:pointer;" onmouseover="this.style.background='#ff0080';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#ff0080'">🐾 ALIMENTAR</button>
             </div>
             <div style="background:rgba(0,255,204,0.1);border:2px solid #00ffcc;border-radius:10px;padding:15px;width:160px;">
                 <div style="font-size:28px;">🎒</div>
@@ -470,6 +540,9 @@
         <button onclick="closeInventory()" style="padding:10px 30px;font-size:18px;font-family:'Bungee';background:transparent;color:#ff0080;border:3px solid #ff0080;cursor:pointer;" onmouseover="this.style.background='#ff0080';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#ff0080'">CERRAR [I]</button>
     </div>
 
+    <!-- Botón pantalla completa -->
+    <button id="fullscreen-btn" title="Pantalla Completa" onclick="toggleFullscreen()">⛶</button>
+
     <div id="touch-controls">
         <div style="display: flex; gap: 20px;">
             <div class="touch-btn" id="t-left">◀</div>
@@ -498,8 +571,6 @@
 // Overdrive Engine
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const speedoCanvas = document.getElementById('speedometer');
-const speedoCtx = speedoCanvas.getContext('2d');
 const speedoTopCanvas = document.getElementById('speedometer-top');
 const speedoTopCtx = speedoTopCanvas.getContext('2d');
 const overlay = document.getElementById('overlay');
@@ -516,6 +587,38 @@ const pauseBtn = document.getElementById('pause-btn');
 canvas.width = 900;
 canvas.height = 550;
 
+// ========== PANTALLA COMPLETA ==========
+function toggleFullscreen() {
+    const el = document.documentElement;
+    const btn = document.getElementById('fullscreen-btn');
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        const promise = el.requestFullscreen ? el.requestFullscreen() :
+                        el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null;
+        if (promise) promise.catch(() => {});
+        btn.textContent = '⛶';
+    } else {
+        const exit = document.exitFullscreen ? document.exitFullscreen() :
+                     document.webkitExitFullscreen ? document.webkitExitFullscreen() : null;
+        if (exit) exit.catch(() => {});
+        btn.textContent = '⛶';
+    }
+}
+document.addEventListener('fullscreenchange', () => {
+    const btn = document.getElementById('fullscreen-btn');
+    if (document.fullscreenElement) btn.textContent = '✕';
+    else btn.textContent = '⛶';
+});
+document.addEventListener('webkitfullscreenchange', () => {
+    const btn = document.getElementById('fullscreen-btn');
+    if (document.webkitFullscreenElement) btn.textContent = '✕';
+    else btn.textContent = '⛶';
+});
+//variables
+
+//variable de jefe
+let bossSpawnedAtThisScore = false;
+
+
 let gameActive = false;
 let frameCount = 0;
 let score = 0;
@@ -528,6 +631,10 @@ let lastCheckpoint = {x: 0, y: 100};
 let stylishCombo = 0;
 let stylishText = '';
 let stylishTimer = 0;
+// Contadores de game over
+let totalGameOvers = 0;
+let sessionGameOvers = 0;
+let currentSaveName = ''; // Nombre de la partida actual
 
 const player = {
     x: 0, y: 100, w: 26, h: 40,
@@ -539,7 +646,9 @@ const player = {
     dashTimer: 0, wheelAngle: 0, wheelSpeed: 0, trail: [],
     lastGroundedY: 100, maxHeight: 0, displaySpeed: 0, lastFacing: 1,
     // Sistemas de asistencia de salto
-    jumpBufferCounter: 0, coyoteCounter: 0
+    jumpBufferCounter: 0, coyoteCounter: 0,
+    //otros...
+    isInvincible: false
 };
 let world = {
     camX: 0, camY: 0,
@@ -561,7 +670,7 @@ const upgrades = {
     jetpack: { level: 0, maxLevel: 100, baseCost: 50,  cost: 50,  name: 'Jetpack' },
     dog:     { level: 0, maxLevel: 1,   baseCost: 100, cost: 100, name: 'Perro Guardian' },
     heal:    { level: 0, maxLevel: 999, baseCost: 10,  cost: 10,  name: 'Checkpoint' },
-    meat:    { level: 0, maxLevel: 999, baseCost: 15,  cost: 15,  name: 'Carne' },
+    meat:    { level: 0, maxLevel: 999, baseCost: 15,  cost: 15,  name: 'Comida Animal' },
     magnet:  { level: 0, maxLevel: 1,   baseCost: 500, cost: 500, name: 'Iman de Monedas' },
     rocket:  { level: 0, maxLevel: 1,   baseCost: 500, cost: 500, name: 'Cohete Horizontal' },
     fuel:    { level: 0, maxLevel: 999, baseCost: 30,  cost: 30,  name: 'Gasolina' }
@@ -575,7 +684,7 @@ const ANIMALS = [
     { id:'lion',    name:'León',       emoji:'🦁', cost:300,  desc:'Feroz en la Sabana',         biomeBonus:'savanna',  speedMult:1.4, jumpMult:1.1, attackMult:2.5,  color:'#DAA520' },
     { id:'whale',   name:'Ballena',    emoji:'🐋', cost:400,  desc:'Reina del Mar',              biomeBonus:'ocean',    speedMult:1.6, jumpMult:0.8, attackMult:2.0,  color:'#1E90FF' },
     { id:'cat',     name:'Gato',       emoji:'🐱', cost:200,  desc:'Ágil en la Ciudad',          biomeBonus:'city',     speedMult:1.3, jumpMult:1.8, attackMult:1.2,  color:'#888' },
-    { id:'eagle',   name:'Águila',     emoji:'🦅', cost:350,  desc:'Domina el Cielo',            biomeBonus:'sky',      speedMult:1.5, jumpMult:2.5, attackMult:1.5,  color:'#8B4513' },
+    { id:'eagle',   name:'Águila',     emoji:'🦅', cost:350,  desc:'Domina las alturas',            biomeBonus:'sky',      speedMult:1.5, jumpMult:2.5, attackMult:1.5,  color:'#8B4513' },
     { id:'tiger',   name:'Tigre',      emoji:'🐯', cost:320,  desc:'Veloz en la Jungla',         biomeBonus:'jungle',   speedMult:1.8, jumpMult:1.3, attackMult:2.2,  color:'#FF8C00' },
     { id:'bear',    name:'Oso',        emoji:'🐻', cost:280,  desc:'Fuerte en la Fábrica',       biomeBonus:'factory',  speedMult:1.1, jumpMult:0.9, attackMult:3.0,  color:'#8B4513' },
     { id:'wolf',    name:'Lobo',       emoji:'🐺', cost:260,  desc:'Cazador del Desierto',       biomeBonus:'desert',   speedMult:1.6, jumpMult:1.2, attackMult:1.8,  color:'#888' },
@@ -587,7 +696,7 @@ const ANIMALS = [
     { id:'croc',    name:'Cocodrilo',  emoji:'🐊', cost:290,  desc:'Depredador del Pantano',     biomeBonus:'ocean',    speedMult:1.3, jumpMult:1.0, attackMult:2.6,  color:'#228B22' },
     { id:'cheetah', name:'Guepardo',   emoji:'🐈', cost:360,  desc:'Más rápido en Sabana',       biomeBonus:'savanna',  speedMult:2.5, jumpMult:1.2, attackMult:1.5,  color:'#DAA520' },
     { id:'bull',    name:'Toro',       emoji:'🐂', cost:250,  desc:'Arremete en el Desierto',    biomeBonus:'desert',   speedMult:1.5, jumpMult:0.9, attackMult:2.5,  color:'#8B0000' },
-    { id:'falcon',  name:'Halcón',     emoji:'🦅', cost:800,  desc:'Maestro del Cielo',          biomeBonus:'sky',      speedMult:2.2, jumpMult:2.2, attackMult:3.0,  color:'#8B4513' },
+    { id:'falcon',  name:'Halcón',     emoji:'🦅', cost:800,  desc:'Maestro dlas alturas',          biomeBonus:'sky',      speedMult:2.2, jumpMult:2.2, attackMult:3.0,  color:'#8B4513' },
     { id:'elephant',name:'Elefante',   emoji:'🐘', cost:270,  desc:'Titan de la Fábrica',        biomeBonus:'factory',  speedMult:1.0, jumpMult:0.8, attackMult:4.0,  color:'#888' },
     { id:'monkey',  name:'Mono',       emoji:'🐒', cost:180,  desc:'Saltarín en Jungla',         biomeBonus:'jungle',   speedMult:1.3, jumpMult:2.8, attackMult:1.0,  color:'#8B4513' },
     { id:'octopus', name:'Pulpo',      emoji:'🐙', cost:420,  desc:'Maestro del Mar',            biomeBonus:'ocean',    speedMult:1.4, jumpMult:1.4, attackMult:2.4,  color:'#800080' },
@@ -605,7 +714,7 @@ const BIOMES = [
     { id:'city',    name:'CIUDAD',     bg:'#0a0a0a', blockColor:'#111122', blockBorder:'#ff0080', skyTop:'#050508', skyBot:'#111130', fogColor:'rgba(255,0,128,0.04)' },
     { id:'jungle',  name:'JUNGLA',     bg:'#001a00', blockColor:'#0a2200', blockBorder:'#00ff44', skyTop:'#001100', skyBot:'#003300', fogColor:'rgba(0,255,68,0.05)' },
     { id:'desert',  name:'DESIERTO',   bg:'#1a1000', blockColor:'#2a1a00', blockBorder:'#ffdd00', skyTop:'#3a1500', skyBot:'#552200', fogColor:'rgba(255,200,0,0.04)' },
-    { id:'sky',     name:'CIELO',      bg:'#000520', blockColor:'#001040', blockBorder:'#aaddff', skyTop:'#000033', skyBot:'#0011aa', fogColor:'rgba(150,200,255,0.05)' }
+    { id:'sky',     name:'ALTURAS',    bg:'#000520', blockColor:'#001040', blockBorder:'#aaddff', skyTop:'#000033', skyBot:'#0011aa', fogColor:'rgba(150,200,255,0.05)' }
 ];
 let currentBiome = 0;
 
@@ -700,7 +809,7 @@ let shieldTimer = 0;
 let speedLines = [];
 let dogHunger = 100; // 0-100, drops over time when dog is active
 let lastHungerDrop = 0;
-
+//fin de variables
 // ========== EL PERRO GUARDIAN ==========
 const dog = {
     x: 0, y: 0, w: 35, h: 25,
@@ -727,6 +836,23 @@ window.onkeydown = (e) => {
     keys[e.code] = true;
 };
 window.onkeyup = (e) => keys[e.code] = false;
+
+// Guardado automático al cerrar la pestaña - SMART SAVE
+window.addEventListener('beforeunload', (e) => {
+    if (gameActive) {
+        if (currentSaveName) {
+            // Si ya tiene nombre, guardar automáticamente sin preguntar
+            saveGame(currentSaveName, false);
+        } else {
+            // Sin nombre: guardar como "Partida_Autosave_[timestamp]" silenciosamente
+            const autoName = `Partida_Autosave_${Date.now()}`;
+            saveGame(autoName, false);
+        }
+        // Mensaje nativo del navegador (no personalizable en navegadores modernos)
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
 
 function setupTouch(id, code) {
     const btn = document.getElementById(id);
@@ -831,13 +957,22 @@ function playSound(type) {
 function pauseGame() {
     if (!gameActive && !shopActive) return;
     gameActive = false;
+    bgMusic.pause(); // Pausar música
     document.getElementById('pause-overlay').style.display = 'flex';
-    document.getElementById('save-name').value = `Partida_Zona_${score}`;
+    // Usar el nombre guardado o generar uno nuevo
+    const saveNameInput = document.getElementById('save-name');
+    if (currentSaveName) {
+        saveNameInput.value = currentSaveName;
+    } else {
+        saveNameInput.value = `Partida_Zona_${score}`;
+    }
 }
 
 function resumeGame() {
     document.getElementById('pause-overlay').style.display = 'none';
+    activarEscudo();
     gameActive = true;
+    bgMusic.play().catch(e => console.log('Audio play blocked')); // Continuar música
 }
 
 function goToMenu() {
@@ -847,9 +982,10 @@ function goToMenu() {
     bgMusic.pause();
 }
 
-function saveGame() {
-    const name = document.getElementById('save-name').value.trim() || 'AutoSave';
-    
+function saveGame(saveName = null, showMessage = true) {
+    const name = saveName || document.getElementById('save-name').value.trim() || 'AutoSave';
+    currentSaveName = name; // Guardar el nombre de la partida actual
+
     // Empaquetar todo el estado del juego actual
     const saveData = {
         world: world,
@@ -860,7 +996,13 @@ function saveGame() {
         score: score,
         distance: distance,
         maxScore: maxScore,
-        lastCheckpoint: lastCheckpoint
+        lastCheckpoint: lastCheckpoint,
+        totalGameOvers: totalGameOvers,
+        sessionGameOvers: sessionGameOvers,
+        currentSaveName: currentSaveName,
+        dogHunger: dogHunger,
+        meatInventory: meatInventory,
+        jetpackFuel: jetpackFuel
     };
 
     let saves = {};
@@ -870,10 +1012,31 @@ function saveGame() {
 
     saves[name] = saveData;
     localStorage.setItem('so_saves', JSON.stringify(saves));
-    
-    showStylish('PARTIDA GUARDADA', '#00ffcc');
-    playSound('checkpoint');
-    resumeGame();
+
+    if (showMessage) {
+        showStylish('PARTIDA GUARDADA', '#00ffcc');
+        playSound('checkpoint');
+        resumeGame();
+    }
+    return true;
+}
+
+function saveAndClose() {
+    const nameInput = document.getElementById('save-name');
+    const name = nameInput.value.trim();
+
+    // Si no hay nombre, usar el actual o generar uno
+    const saveName = name || currentSaveName || `Partida_Zona_${score}`;
+
+    if (saveGame(saveName, false)) {
+        showStylish('PARTIDA GUARDADA - CERRANDO...', '#ff0080');
+        // Pequeña pausa para que se vea el mensaje
+        setTimeout(() => {
+            window.close();
+            // Si window.close() no funciona (navegador bloquea), redirigir
+            window.location.href = 'about:blank';
+        }, 500);
+    }
 }
 
 function showLoadMenu() {
@@ -903,8 +1066,8 @@ function showLoadMenu() {
         btn.style.width = '100%';
         btn.style.borderColor = '#00ffcc';
         btn.style.color = '#00ffcc';
-        btn.onclick = () => loadGame(saves[key]);
-        
+        btn.onclick = () => loadGame(saves[key], key);
+
         const delBtn = document.createElement('button');
         delBtn.textContent = '❌';
         delBtn.style.borderColor = '#ff0080';
@@ -927,22 +1090,31 @@ function hideLoadMenu() {
     overlay.style.display = 'flex';
 }
 
-function loadGame(saveData) {
+function loadGame(saveData, saveName) {
     // Restaurar los objetos
     world = saveData.world;
     Object.assign(player, saveData.player);
-    
+
     // Restaurar mejoras profundamente para conservar referencias
     for (let key in saveData.upgrades) {
         if (upgrades[key]) Object.assign(upgrades[key], saveData.upgrades[key]);
     }
-    
+
     Object.assign(dog, saveData.dog);
     coins = saveData.coins;
     score = saveData.score;
     distance = saveData.distance;
     maxScore = saveData.maxScore;
     lastCheckpoint = saveData.lastCheckpoint;
+
+    // Restaurar contadores de game over y datos adicionales
+    totalGameOvers = saveData.totalGameOvers || 0;
+    sessionGameOvers = saveData.sessionGameOvers || 0;
+    dogHunger = saveData.dogHunger || 100;
+    meatInventory = saveData.meatInventory || 0;
+    jetpackFuel = saveData.jetpackFuel || 100;
+    // Usar el nombre pasado como parámetro, o el guardado, o vacío
+    currentSaveName = saveName || saveData.currentSaveName || '';
 
     // Cerrar UIs
     hideLoadMenu();
@@ -960,7 +1132,7 @@ function loadGame(saveData) {
     bgMusic.currentTime = 0;
     bgMusic.play().catch(e => console.log('Audio autoplay blocked'));
 
-    respawnAtCheckpoint();
+    respawnAtCheckpoint(false); // No es game over, es carga
     updateShopUI(); // Sincronizar niveles de tienda
 
     if (!animationId) loop();
@@ -1601,9 +1773,15 @@ function updateInventoryUI() {
         rBtn.textContent = 'BLOQUEADO';
     }
 
-    const fuelPct = Math.floor(jetpackFuel);
-    document.getElementById('inv-fuel-bar-text').textContent = fuelPct + '%';
-    document.getElementById('inv-fuel-bar').style.width = fuelPct + '%';
+    // Mostrar FULL/E en lugar de porcentaje (igual que velocímetro)
+    let fuelLabel;
+    if (jetpackFuel >= 90) fuelLabel = 'FULL';
+    else if (jetpackFuel >= 70) fuelLabel = '3/4';
+    else if (jetpackFuel >= 45) fuelLabel = '1/2';
+    else if (jetpackFuel >= 20) fuelLabel = '1/4';
+    else fuelLabel = 'E';
+    document.getElementById('inv-fuel-bar-text').textContent = fuelLabel;
+    document.getElementById('inv-fuel-bar').style.width = jetpackFuel + '%';
 }
 
 function toggleItem(item) {
@@ -1621,22 +1799,26 @@ function toggleItem(item) {
     updateInventoryUI();
 }
 
-function feedDog() {
+function feedPet() {
     if (meatInventory <= 0) {
-        showStylish('SIN CARNE!', '#ff4400');
+        showStylish('SIN COMIDA!', '#ff4400');
         return;
     }
-    if (!dog.unlocked) {
-        showStylish('PRIMERO COMPRA EL PERRO!', '#ff4400');
+
+    // Alimentar perro si está desbloqueado
+    if (dog.unlocked) {
+        meatInventory--;
+        dogHunger = Math.min(100, dogHunger + 50);
+        showStylish('MASCOTA ALIMENTADA! 🍖', '#ff8800');
+        playSound('coin');
+        spawnParticles(dog.x, dog.y, '#ff8800', 10, 4);
+        updateInventoryUI();
+        document.getElementById('inv-meat-count').textContent = 'x' + meatInventory;
         return;
     }
-    meatInventory--;
-    dogHunger = Math.min(100, dogHunger + 50);
-    showStylish('PERRO ALIMENTADO! 🥩', '#ff8800');
-    playSound('coin');
-    spawnParticles(dog.x, dog.y, '#ff8800', 10, 4);
-    updateInventoryUI();
-    document.getElementById('inv-meat-count').textContent = 'x' + meatInventory;
+
+    // Si no hay mascotas, mostrar mensaje
+    showStylish('NO TIENES MASCOTA!', '#ff4400');
 }
 function openShop() {
     if (shopActive) return;
@@ -1702,7 +1884,14 @@ function updateShopUI() {
                 itemEl.classList.toggle('disabled', coins < upg.cost);
             }
         } else if (key === 'fuel') {
-            levelEl.textContent = `⛽ ${Math.floor(jetpackFuel)}%`;
+            // Mostrar FULL/E en lugar de porcentaje
+            let fuelLabel;
+            if (jetpackFuel >= 90) fuelLabel = 'FULL';
+            else if (jetpackFuel >= 70) fuelLabel = '3/4';
+            else if (jetpackFuel >= 45) fuelLabel = '1/2';
+            else if (jetpackFuel >= 20) fuelLabel = '1/4';
+            else fuelLabel = 'E';
+            levelEl.textContent = `⛽ ${fuelLabel}`;
             costEl.textContent = `💰 ${upg.cost}`;
             itemEl.classList.toggle('disabled', coins < upg.cost || jetpackFuel >= 100);
         } else if (upg.level >= upg.maxLevel) {
@@ -1751,7 +1940,7 @@ function buyUpgrade(type) {
         if (coins < upg.cost) return;
         coins -= upg.cost;
         meatInventory++;
-        showStylish('🥩 CARNE AÑADIDA AL INVENTARIO!', '#ff8800');
+        showStylish('🍖 COMIDA AÑADIDA AL INVENTARIO!', '#ff8800');
         playSound('coin');
         updateShopUI();
         document.getElementById('shop-coins').textContent = coins;
@@ -1820,6 +2009,13 @@ function applyUpgradeEffects(type) {
         case 'jetpack': jetpackFuel = 100; break;
     }
 }
+
+//En desarrollo, igual no la borres por que si no te tira un error por la cara aunque no sirva
+function openSettingsMenu() {
+    console.log("El menú de ajustes aún está en desarrollo (como los jefes)");
+    // Aquí podrías mostrar un div con opciones
+}
+//En desarrollo, igual no la borres por que si no te tira un error por la cara aunque no sirva
 
 // ========== EL PERRO GUARDIAN ==========
 function updateDog() {
@@ -1988,6 +2184,7 @@ function drawDog() {
 
 // ========== VELOCIMETRO SUPERIOR DERECHA ==========
 function drawSpeedometerTop() {
+    ctx.save();
     const c = speedoTopCtx;
     const W = 100, H = 100, cx = 50, cy = 55, R = 38;
     c.clearRect(0, 0, W, H);
@@ -2039,6 +2236,7 @@ function drawSpeedometerTop() {
     c.fillStyle = '#888';
     c.font = '8px monospace';
     c.fillText('KM/H', cx, cy + 25);
+    ctx.restore();
 }
 
 // ========== CONTROLES DEL JETPACK ==========
@@ -2048,9 +2246,22 @@ const fuelDisplay = document.getElementById('jetpack-fuel-display');
 const fuelText = document.getElementById('fuel-text');
 
 function handleJetpack() {
+    // Actualizar panel de recursos de combustible
+    const fuelBarTop = document.getElementById('fuel-bar-top');
+    if (fuelBarTop) {
+        fuelBarTop.style.width = jetpackFuel + '%';
+    }
+
     if (upgrades.jetpack.level > 0) {
         if (fuelDisplay) fuelDisplay.style.display = 'block';
-        if (fuelText) fuelText.textContent = Math.floor(jetpackFuel) + '%';
+        // Mostrar FULL/E en lugar de porcentaje (igual que velocímetro)
+        if (fuelText) {
+            if (jetpackFuel >= 90) fuelText.textContent = 'FULL';
+            else if (jetpackFuel >= 70) fuelText.textContent = '3/4';
+            else if (jetpackFuel >= 45) fuelText.textContent = '1/2';
+            else if (jetpackFuel >= 20) fuelText.textContent = '1/4';
+            else fuelText.textContent = 'E';
+        }
     } else {
         if (fuelDisplay) fuelDisplay.style.display = 'none';
     }
@@ -2941,7 +3152,7 @@ function initWorld() {
     world.isGenerated = true;
 }
 
-function respawnAtCheckpoint() {
+function respawnAtCheckpoint(isGameOver = true) {
     player.x = lastCheckpoint.x;
     player.y = lastCheckpoint.y;
     player.dx = 0;
@@ -2952,7 +3163,7 @@ function respawnAtCheckpoint() {
     player.trail = [];
     screenShake = 10;
     stylishCombo = 0;
-    
+
     // --- SOLUCIÓN AL BUG DE TEMBLOR Y MUERTE INFINITA ---
     // Ajustamos la cámara instantáneamente al jugador para evitar
     // que se quede atrás y detecte caída fuera de pantalla al reaparecer.
@@ -2969,6 +3180,19 @@ function respawnAtCheckpoint() {
         dog.targetEnemy = null;
         dog.state = 'follow';
     }
+
+    // Incrementar contadores de game over
+    if (isGameOver) {
+        totalGameOvers++;
+        sessionGameOvers++;
+        showStylish(`GAME OVER #${sessionGameOvers}`, '#ff0080');
+        // Actualizar display
+        const goDisplay = document.getElementById('gameover-display');
+        if (goDisplay) {
+            goDisplay.style.display = 'block';
+            goDisplay.textContent = `GameOvers: ${sessionGameOvers} (Total: ${totalGameOvers})`;
+        }
+    }
 }
 
 function startGame() {
@@ -2978,7 +3202,11 @@ function startGame() {
 
     overlay.style.display = 'none';
     pauseBtn.style.display = 'block';
-    
+
+    // Resetear variables de partida nueva (pero mantener totalGameOvers)
+    currentSaveName = '';
+    sessionGameOvers = 0;
+
     player.x = 0;
     player.y = 100;
     player.dx = 0;
@@ -3038,15 +3266,29 @@ function startGame() {
     if (!animationId) loop();
 }
 
+//NO TOQUES ESTA LINEA POR QUE SI TE CAES DARA ERROR, SI TOCAS UN PINCHO, ERROR, SI TECOAS UN ENEMIGO, ERROR
 function gameOver(msg) {
-    gameActive = false;
-    screenShake = 25;
-    pauseBtn.style.display = 'none';
-    spawnParticles(player.x, player.y, '#ff0080', 50, 15);
-    bgMusic.pause();
-    overlay.style.display = 'flex';
-    document.getElementById('overlay-title').innerText = "SISTEMA CAÍDO";
-    document.getElementById('overlay-msg').innerHTML = msg + "<br><br>Monedas: " + coins + " | Distancia: " + Math.floor(distance) + "m";
+    if (!player.isInvincible) {
+        gameActive = false;
+        screenShake = 25;
+        pauseBtn.style.display = 'none';
+        spawnParticles(player.x, player.y, '#ff0080', 50, 15);
+        bgMusic.pause();
+        overlay.style.display = 'flex';
+        document.getElementById('overlay-title').innerText = "SISTEMA CAÍDO";
+        document.getElementById('overlay-msg').innerHTML = msg + "<br><br>Monedas: " + coins + " | Distancia: " + Math.floor(distance) + "m";
+    }
+}
+
+function activarEscudo() {
+    player.isInvincible = true;
+    console.log("ESCUDO ACTIVADO: El audio está a salvo");
+    
+    // El escudo dura 1.5 segundos
+    setTimeout(() => {
+        player.isInvincible = false;
+        console.log("ESCUDO DESACTIVADO: Vuelves a ser mortal");
+    }, 1500);
 }
 
 function spawnParticles(x, y, color, amount, speed) {
@@ -3135,7 +3377,20 @@ function update() {
         player.dy += 0.4;
     }
 
-    player.dy += player.gravity;
+    // ========== FLOTACIÓN EN BIOMA AGUA ==========
+    const currentBiomeData = getCurrentBiome();
+    if (currentBiomeData.id === 'ocean') {
+        // Gravedad reducida + fuerza de flotación suave hacia arriba
+        player.dy += player.gravity * 0.25;
+        if (!player.grounded && !player.dashActive) {
+            // Flotación: empuja suavemente hacia arriba cuando cae
+            if (player.dy > 0.5) player.dy -= 0.35;
+            // Amortiguación de velocidad vertical para sensación acuática
+            player.dy *= 0.92;
+        }
+    } else {
+        player.dy += player.gravity;
+    }
     //Agregado para Hold
     if (!keys['KeyW'] && player.dy < 0 && !player.dashActive) {
         player.dy *= 0.80; // Entre más cerca de 0, más rápido caerá al soltar. (0.80 es un buen balance).
@@ -3330,6 +3585,16 @@ function update() {
             lastCheckpoint = {x: cp.x, y: cp.y};
             playSound('checkpoint');
             showStylish('CHECKPOINT!', '#00ffcc');
+            // Resetear game overs de sesión al alcanzar checkpoint
+            if (sessionGameOvers > 0) {
+                showStylish(`✅ Game Overs reseteados: ${sessionGameOvers}`, '#00ffcc');
+                sessionGameOvers = 0;
+                // Actualizar display
+                const goDisplay = document.getElementById('gameover-display');
+                if (goDisplay) {
+                    goDisplay.textContent = `GameOvers: ${sessionGameOvers} (Total: ${totalGameOvers})`;
+                }
+            }
         }
     }
 
@@ -3441,6 +3706,15 @@ function update() {
         hungerDisplay.style.display = 'block';
         hungerText.textContent = Math.floor(dogHunger) + '%';
         hungerText.style.color = dogHunger < 30 ? '#ff0000' : dogHunger < 60 ? '#ffaa00' : '#00ff00';
+
+        // Actualizar barra de hambre en el panel de recursos
+        const petHungerContainer = document.getElementById('pet-hunger-container');
+        const petHungerBar = document.getElementById('pet-hunger-bar');
+        if (petHungerContainer && petHungerBar) {
+            petHungerContainer.style.display = 'block';
+            petHungerBar.style.width = dogHunger + '%';
+        }
+
         // Perro más lento y débil si tiene hambre
         if (dogHunger <= 0) {
             // Dog can't attack when starving
@@ -3450,11 +3724,13 @@ function update() {
 
     updateBiome();
     updateBoss();
-
-//    // Spawn boss every 20 zones - genera arena plana al llegar
-//    if (score > 0 && score % 20 === 0 && !bossActive && !activeBoss) {
-//        spawnBoss();
-//    }
+//los jefes son experimentales, aun no funcionan y no se por que, pero en algun momento lo arreglare
+//si alguien encuentra un error por favor avise!
+   // Spawn boss every 20 zones - genera arena plana al llegar
+    //if (score % 20 !== 0) {
+    //    bossSpawnedAtThisScore = false;
+    //}
+//este comentario esta en español por que se medio la gana nomas
 
     // Apply animal speed/jump multipliers to player caps
     const animalSpeedMult = getAnimalMultiplier('speed');
@@ -3529,95 +3805,13 @@ function checkCollisions(axis) {
 function loop() {
     if (gameActive) update();
     draw();
+    if (score > 0 && score % 20 === 0 && !bossActive && !bossSpawnedAtThisScore) {
+    console.log("¡Evento de jefe iniciado!");
+    bossSpawnedAtThisScore = true; // Bloqueamos para que no spawnee 100 veces
+    spawnBoss();
+    }
     frameCount++;
     animationId = requestAnimationFrame(loop);
-}
-
-function drawSpeedometer() {
-    const c = speedoCtx;
-    const W = 120, H = 120, cx = 60, cy = 68, R = 48;
-    c.clearRect(0, 0, W, H);
-
-    const kmh = Math.min(200, Math.max(0, player.displaySpeed));
-    const speedPct = kmh / 200; 
-
-    const startAngle = (Math.PI / 180) * 150;  
-    const endAngle   = (Math.PI / 180) * 390;  
-    const totalAngle = (Math.PI / 180) * 240;
-
-    c.beginPath();
-    c.arc(cx, cy, R, startAngle, startAngle + totalAngle);
-    c.strokeStyle = 'rgba(0,0,0,0.7)';
-    c.lineWidth = 12;
-    c.stroke();
-
-    c.beginPath();
-    c.arc(cx, cy, R + 6, 0, Math.PI * 2);
-    c.strokeStyle = 'rgba(0,255,204,0.25)';
-    c.lineWidth = 2;
-    c.stroke();
-
-    if (speedPct > 0) {
-        const grad = c.createLinearGradient(cx - R, cy, cx + R, cy);
-        grad.addColorStop(0, '#00ffcc');
-        grad.addColorStop(0.5, '#ffaa00');
-        grad.addColorStop(1, '#ff0080');
-        c.beginPath();
-        c.arc(cx, cy, R, startAngle, startAngle + totalAngle * speedPct);
-        c.strokeStyle = grad;
-        c.lineWidth = 12;
-        c.lineCap = 'round';
-        c.stroke();
-        c.lineCap = 'butt';
-    }
-
-    for (let i = 0; i <= 4; i++) {
-        const a = startAngle + totalAngle * (i / 4);
-        const x1 = cx + Math.cos(a) * (R - 14);
-        const y1 = cy + Math.sin(a) * (R - 14);
-        const x2 = cx + Math.cos(a) * (R + 2);
-        const y2 = cy + Math.sin(a) * (R + 2);
-        c.beginPath();
-        c.moveTo(x1, y1);
-        c.lineTo(x2, y2);
-        c.strokeStyle = '#888';
-        c.lineWidth = 1.5;
-        c.stroke();
-        const lx = cx + Math.cos(a) * (R - 24);
-        const ly = cy + Math.sin(a) * (R - 24);
-        c.fillStyle = '#aaa';
-        c.font = 'bold 8px Bungee, monospace';
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
-        c.fillText(i * 50, lx, ly);
-    }
-
-    const needleAngle = startAngle + totalAngle * speedPct;
-    const nx = cx + Math.cos(needleAngle) * (R - 6);
-    const ny = cy + Math.sin(needleAngle) * (R - 6);
-    c.beginPath();
-    c.moveTo(cx, cy);
-    c.lineTo(nx, ny);
-    c.strokeStyle = '#fff';
-    c.lineWidth = 2;
-    c.lineCap = 'round';
-    c.stroke();
-    c.lineCap = 'butt';
-
-    c.beginPath();
-    c.arc(cx, cy, 5, 0, Math.PI * 2);
-    c.fillStyle = '#fff';
-    c.fill();
-
-    c.fillStyle = kmh > 150 ? '#ff0080' : kmh > 80 ? '#ffaa00' : '#00ffcc';
-    c.font = 'bold 14px Bungee, monospace';
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText(Math.floor(kmh), cx, cy + 20);
-
-    c.fillStyle = '#666';
-    c.font = '7px Bungee, monospace';
-    c.fillText('KM/H', cx, cy + 30);
 }
 
 function draw() {
@@ -3974,7 +4168,6 @@ function draw() {
     ctx.restore();
     ctx.restore();
 
-    drawSpeedometer();
     drawSpeedometerTop();
 
     // Boss arena overlay (drawn in screen space)
